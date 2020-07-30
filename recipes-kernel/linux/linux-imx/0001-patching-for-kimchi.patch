@@ -1,12 +1,12 @@
-From 6c14fb4295f310f90901499f83cf61272f7c382a Mon Sep 17 00:00:00 2001
+From 8e90aab9af08898937594277703dbebb138be78d Mon Sep 17 00:00:00 2001
 From: Kurt Kiefer <kekiefer@gmail.com>
 Date: Thu, 9 Jan 2020 13:23:28 -0800
 Subject: [PATCH 1/1] patching for kimchi
 
 ---
  arch/arm64/boot/dts/freescale/Makefile        |   1 +
- .../boot/dts/freescale/imx8mm-kimchi.dts      | 574 ++++++++++++++++++
- 2 files changed, 575 insertions(+)
+ .../boot/dts/freescale/imx8mm-kimchi.dts      | 575 ++++++++++++++++++
+ 2 files changed, 576 insertions(+)
  create mode 100755 arch/arm64/boot/dts/freescale/imx8mm-kimchi.dts
 
 diff --git a/arch/arm64/boot/dts/freescale/Makefile b/arch/arm64/boot/dts/freescale/Makefile
@@ -23,10 +23,10 @@ index da57a74d955e6..c6c10b064c961 100644
  dtb-$(CONFIG_ARCH_MXC) += imx8mq-pico-pi.dtb
 diff --git a/arch/arm64/boot/dts/freescale/imx8mm-kimchi.dts b/arch/arm64/boot/dts/freescale/imx8mm-kimchi.dts
 new file mode 100755
-index 0000000000000..e3fdb1919258d
+index 0000000000000..809753264268b
 --- /dev/null
 +++ b/arch/arm64/boot/dts/freescale/imx8mm-kimchi.dts
-@@ -0,0 +1,574 @@
+@@ -0,0 +1,575 @@
 +/*
 + * Copyright 2018 NXP
 + *
@@ -234,6 +234,7 @@ index 0000000000000..e3fdb1919258d
 +	pinctrl-2 = <&pinctrl_usdhc2_200mhz>, <&pinctrl_usdhc2_gpio>;
 +	cd-gpios = <&gpio2 12 GPIO_ACTIVE_LOW>;
 +	bus-width = <4>;
++	no-1-8-v; /* bug (v0.9): SD2 is supplied by the voltage select rail */
 +	status = "okay";
 +};
 +
