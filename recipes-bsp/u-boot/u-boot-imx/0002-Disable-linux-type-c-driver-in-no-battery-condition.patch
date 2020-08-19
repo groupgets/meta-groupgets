@@ -1,0 +1,100 @@
+From 728d41c2442e4329efc5dcc15f96bd77b069a1ef Mon Sep 17 00:00:00 2001
+From: Kurt Kiefer <kekiefer@gmail.com>
+Date: Wed, 19 Aug 2020 12:36:25 -0700
+Subject: [PATCH 2/2] Disable linux type-c driver in no-battery condition
+
+---
+ board/groupgets/kimchi/kimchi.c | 50 +++++++++++++++++++++++++++++++++
+ configs/kimchi_defconfig        |  1 +
+ 2 files changed, 51 insertions(+)
+
+diff --git a/board/groupgets/kimchi/kimchi.c b/board/groupgets/kimchi/kimchi.c
+index b8a71504be..34c5c61a5f 100644
+--- a/board/groupgets/kimchi/kimchi.c
++++ b/board/groupgets/kimchi/kimchi.c
+@@ -94,6 +94,7 @@ int dram_init_banksize(void)
+ 
+ #ifdef CONFIG_USB_TCPC
+ struct tcpc_port port1;
++static bool system_has_battery;
+ 
+ static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
+ {
+@@ -178,6 +179,8 @@ int pd_switch_snk_enable(struct tcpc_port *port)
+ 		have_battery = true;
+ 	}
+ 
++	system_has_battery = have_battery;
++
+ 	if (port == &port1) {
+ 		debug("Setup pd switch on port 1\n");
+ 		return setup_pd_switch(2, 0x72, have_battery);
+@@ -616,6 +619,53 @@ void board_late_mmc_env_init(void)
+ }
+ #endif
+ 
++#ifdef CONFIG_OF_BOARD_SETUP
++int ft_board_disable_ptn5110(void *blob, bd_t *bd)
++{
++	int offset, len, err;
++
++	offset = fdt_path_offset(blob, "/soc@0/bus@30800000/i2c@30a40000/tcpc@50");
++	if (offset < 0) {
++		printf("ERROR: tcpc@50 node not found in device tree (%d)\n", offset);
++		return offset;
++	}
++
++	err = fdt_setprop_string(blob, offset, "status", "disabled");
++	if (err) {
++		printf("ERROR: tcpc@50 node could not be disabled (%d)\n", offset);
++		return offset;
++	}
++
++	return 0;
++}
++
++int ft_board_setup(void *blob, bd_t *bd)
++{
++	if (env_get("fdt_noauto")) {
++		printf("   Skipping ft_board_setup (fdt_noauto defined)\n");
++		return 0;
++	}
++
++#ifdef CONFIG_USB_TCPC
++
++	/* if the system doesn't have a battery, we will disable linux
++	   reinitializing the pd contract, since doing so will cause
++	   resets of the board's primary power source
++	*/
++
++	if (!system_has_battery && port1.pd_state == ATTACHED) {
++		debug("Disabling FDT ptn5110 in no-battery + sink condition\n");
++		ft_board_disable_ptn5110(blob, bd);
++	} else {
++		debug("Leaving FDT ptn5110 configuration, system_has_battery=%d pd_state=%d\n",
++			system_has_battery, port1.pd_state);
++	}
++
++#endif
++	return 0;
++}
++#endif
++
+ int board_late_init(void)
+ {
+ #ifdef CONFIG_ENV_IS_IN_MMC
+diff --git a/configs/kimchi_defconfig b/configs/kimchi_defconfig
+index c9c9222a4e..0abb825161 100644
+--- a/configs/kimchi_defconfig
++++ b/configs/kimchi_defconfig
+@@ -31,6 +31,7 @@ CONFIG_CMD_CACHE=y
+ CONFIG_CMD_REGULATOR=y
+ CONFIG_CMD_MEMTEST=y
+ CONFIG_OF_CONTROL=y
++CONFIG_OF_BOARD_SETUP=y
+ CONFIG_FASTBOOT=y
+ CONFIG_USB_FUNCTION_FASTBOOT=y
+ CONFIG_CMD_FASTBOOT=y
+-- 
+2.28.0
+
