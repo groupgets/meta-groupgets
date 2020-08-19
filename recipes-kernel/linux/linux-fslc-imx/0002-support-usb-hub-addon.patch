@@ -1,0 +1,91 @@
+From 35a9d93181d03b19923415cea2ad29f4665f8e80 Mon Sep 17 00:00:00 2001
+From: Kurt Kiefer <kekiefer@gmail.com>
+Date: Fri, 31 Jul 2020 10:03:42 -0700
+Subject: [PATCH 2/3] support usb hub addon
+
+---
+ .../boot/dts/freescale/imx8mm-kimchi.dts      | 38 ++++++++++++++-----
+ 1 file changed, 28 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/imx8mm-kimchi.dts b/arch/arm64/boot/dts/freescale/imx8mm-kimchi.dts
+index 5c173c7bf1715..b0b474046a7cf 100755
+--- a/arch/arm64/boot/dts/freescale/imx8mm-kimchi.dts
++++ b/arch/arm64/boot/dts/freescale/imx8mm-kimchi.dts
+@@ -60,14 +60,6 @@
+ 		};
+ 	};
+ 
+-	usb_reset: usb-reset {
+-		compatible = "gpio-reset";
+-		reset-gpios = <&gpio5 0 GPIO_ACTIVE_LOW>;
+-		reset-delay-us = <2000>;
+-		reset-post-delay-ms = <40>;
+-		#reset-cells = <0>;
+-	};
+-
+ 	pcie0_refclk: pcie0-refclk {
+ 		compatible = "fixed-clock";
+ 		#clock-cells = <0>;
+@@ -188,7 +180,6 @@
+ 	dr_mode = "host";
+ 	disable-over-current;
+ 	status = "okay";
+-	resets = <&usb_reset>;
+ };
+ 
+ &usdhc1 {
+@@ -383,6 +374,22 @@
+ 	};
+ };
+ 
++&i2c4 {
++	clock-frequency = <400000>;
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_i2c4>;
++	status = "okay";
++
++	usbhub: usbhub@2c {
++		compatible ="microchip,usb2514b";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_usbhub>;
++		reg = <0x2c>;
++		reset-gpios = <&gpio5 0 GPIO_ACTIVE_LOW>;
++		swap-dx-lanes = <0>;
++	};
++};
++
+ &iomuxc {
+ 	pinctrl-names = "default";
+ 
+@@ -415,9 +422,15 @@
+ 		>;
+ 	};
+ 
++	pinctrl_i2c4: i2c4grp {
++		fsl,pins = <
++			MX8MM_IOMUXC_I2C4_SCL_I2C4_SCL			0x400001c3
++			MX8MM_IOMUXC_I2C4_SDA_I2C4_SDA			0x400001c3
++		>;
++	};
++
+ 	pinctrl_pcie0: pcie0grp {
+ 		fsl,pins = <
+-			MX8MM_IOMUXC_I2C4_SCL_PCIE1_CLKREQ_B	0x61 /* open drain, pull up */
+ 			MX8MM_IOMUXC_SAI5_RXD0_GPIO3_IO21	0x41
+ 			MX8MM_IOMUXC_SAI5_MCLK_GPIO3_IO25		0x41
+ 		>;
+@@ -439,6 +452,11 @@
+ 		fsl,pins = <
+ 			MX8MM_IOMUXC_GPIO1_IO11_GPIO1_IO11		0x100
+ 			MX8MM_IOMUXC_GPIO1_IO14_GPIO1_IO14		0x100
++		>;
++	};
++
++	pinctrl_usbhub: usbhubgrp {
++		fsl,pins = <
+ 			MX8MM_IOMUXC_SAI3_TXC_GPIO5_IO0		0x100
+ 		>;
+ 	};
+-- 
+2.28.0
+
