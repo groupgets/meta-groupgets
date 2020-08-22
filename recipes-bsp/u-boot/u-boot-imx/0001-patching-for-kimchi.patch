@@ -1,22 +1,22 @@
-From 900101f1cc30338a914e297dc8c83c9d93593487 Mon Sep 17 00:00:00 2001
+From 94ebbed9e59dac6d63ec3fd655c30b6a14fbaba8 Mon Sep 17 00:00:00 2001
 From: Kurt Kiefer <kekiefer@gmail.com>
 Date: Wed, 29 Jul 2020 21:52:42 -0700
 Subject: [PATCH 1/2] patching for kimchi
 
 ---
  arch/arm/dts/Makefile                  |    3 +-
- arch/arm/dts/fsl-imx8mm-kimchi.dts     |  457 ++++++
+ arch/arm/dts/fsl-imx8mm-kimchi.dts     |  486 +++++++
  arch/arm/mach-imx/imx8m/Kconfig        |    6 +
  board/groupgets/kimchi/Kconfig         |   14 +
  board/groupgets/kimchi/Makefile        |   16 +
- board/groupgets/kimchi/kimchi.c        |  643 ++++++++
+ board/groupgets/kimchi/kimchi.c        |  647 +++++++++
  board/groupgets/kimchi/lpddr4_timing.c | 1855 ++++++++++++++++++++++++
  board/groupgets/kimchi/spl.c           |  240 +++
  board/groupgets/kimchi/tcpc.c          |    1 +
  board/groupgets/kimchi/tcpc.h          |    1 +
- configs/kimchi_defconfig               |   74 +
+ configs/kimchi_defconfig               |   76 +
  include/configs/kimchi.h               |  307 ++++
- 12 files changed, 3616 insertions(+), 1 deletion(-)
+ 12 files changed, 3651 insertions(+), 1 deletion(-)
  create mode 100644 arch/arm/dts/fsl-imx8mm-kimchi.dts
  create mode 100644 board/groupgets/kimchi/Kconfig
  create mode 100644 board/groupgets/kimchi/Makefile
@@ -44,10 +44,10 @@ index d7e473f673..2068c24e29 100644
  	r8a7790-lager-u-boot.dtb \
 diff --git a/arch/arm/dts/fsl-imx8mm-kimchi.dts b/arch/arm/dts/fsl-imx8mm-kimchi.dts
 new file mode 100644
-index 0000000000..47ab64277e
+index 0000000000..75e22f4d91
 --- /dev/null
 +++ b/arch/arm/dts/fsl-imx8mm-kimchi.dts
-@@ -0,0 +1,457 @@
+@@ -0,0 +1,486 @@
 +/*
 + * Copyright 2018 NXP
 + *
@@ -82,6 +82,32 @@ index 0000000000..47ab64277e
 +		};
 +	};
 +
++	leds {
++		compatible = "gpio-leds";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_gpio_leds>;
++
++		red-led {
++			label = "status0:red:cpu0";
++			gpios = <&gpio5 3 GPIO_ACTIVE_LOW>;
++			default-state = "off";
++			linux,default-trigger = "cpu0";
++		};
++
++		green-led {
++			label = "status0:green:usr";
++			gpios = <&gpio5 4 GPIO_ACTIVE_LOW>;
++			default-state = "off";
++		};
++
++		blue-led {
++			label = "status0:blue:heartbeat";
++			gpios = <&gpio5 3 GPIO_ACTIVE_LOW>;
++			default-state = "on";
++			linux,default-trigger = "heartbeat";
++		};
++	};
++
 +	reg_usdhc2_vmmc: regulator-usdhc2 {
 +		compatible = "regulator-fixed";
 +		regulator-name = "VSD_3V3";
@@ -93,15 +119,18 @@ index 0000000000..47ab64277e
 +
 +&iomuxc {
 +	pinctrl-names = "default";
-+	pinctrl-0 = <&pinctrl_gpio_led>;
++	pinctrl-0 = <&pinctrl_hog_1>;
 +
 +	imx8mm-evk {
 +
-+		pinctrl_gpio_led: gpioledgrp {
++		pinctrl_hog_1: hoggrp-1 {
++		};
++
++		pinctrl_gpio_leds: gpioledgrp {
 +			fsl,pins = <
-+				MX8MM_IOMUXC_SPDIF_EXT_CLK_GPIO5_IO5		0x19
-+				MX8MM_IOMUXC_SPDIF_RX_GPIO5_IO4			0x19
-+				MX8MM_IOMUXC_SPDIF_TX_GPIO5_IO3			0x19
++				MX8MM_IOMUXC_SPDIF_EXT_CLK_GPIO5_IO5		0x20
++				MX8MM_IOMUXC_SPDIF_RX_GPIO5_IO4			0x20
++				MX8MM_IOMUXC_SPDIF_TX_GPIO5_IO3			0x20
 +			>;
 +		};
 +
@@ -572,10 +601,10 @@ index 0000000000..6831d5608b
 +endif
 diff --git a/board/groupgets/kimchi/kimchi.c b/board/groupgets/kimchi/kimchi.c
 new file mode 100644
-index 0000000000..b8a71504be
+index 0000000000..3a5231d846
 --- /dev/null
 +++ b/board/groupgets/kimchi/kimchi.c
-@@ -0,0 +1,643 @@
+@@ -0,0 +1,647 @@
 +/*
 + * Copyright 2020 GroupGets
 + * Copyright 2018 NXP
@@ -853,6 +882,10 @@ index 0000000000..b8a71504be
 +
 +int board_init(void)
 +{
++#ifdef CONFIG_LED
++	led_default_state();
++#endif
++
 +#ifdef CONFIG_USB_TCPC
 +	setup_typec();
 +#endif
@@ -3344,10 +3377,10 @@ index 0000000000..b990365a11
 \ No newline at end of file
 diff --git a/configs/kimchi_defconfig b/configs/kimchi_defconfig
 new file mode 100644
-index 0000000000..c9c9222a4e
+index 0000000000..dd1a89668e
 --- /dev/null
 +++ b/configs/kimchi_defconfig
-@@ -0,0 +1,74 @@
+@@ -0,0 +1,76 @@
 +CONFIG_ARM=y
 +CONFIG_ARCH_IMX8M=y
 +CONFIG_SYS_TEXT_BASE=0x40200000
@@ -3400,6 +3433,8 @@ index 0000000000..c9c9222a4e
 +CONFIG_MMC_HS400_ES_SUPPORT=y
 +# CONFIG_DM_PMIC=y
 +CONFIG_EFI_PARTITION=y
++CONFIG_LED=y
++CONFIG_LED_GPIO=y
 +
 +CONFIG_PINCTRL=y
 +CONFIG_PINCTRL_IMX8M=y

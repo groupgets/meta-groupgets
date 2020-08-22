@@ -1,4 +1,4 @@
-From 728d41c2442e4329efc5dcc15f96bd77b069a1ef Mon Sep 17 00:00:00 2001
+From ef93880d9d1b539675559e9a2f80bdeb55323b01 Mon Sep 17 00:00:00 2001
 From: Kurt Kiefer <kekiefer@gmail.com>
 Date: Wed, 19 Aug 2020 12:36:25 -0700
 Subject: [PATCH 2/2] Disable linux type-c driver in no-battery condition
@@ -9,7 +9,7 @@ Subject: [PATCH 2/2] Disable linux type-c driver in no-battery condition
  2 files changed, 51 insertions(+)
 
 diff --git a/board/groupgets/kimchi/kimchi.c b/board/groupgets/kimchi/kimchi.c
-index b8a71504be..34c5c61a5f 100644
+index 3a5231d846..b5b3f95ede 100644
 --- a/board/groupgets/kimchi/kimchi.c
 +++ b/board/groupgets/kimchi/kimchi.c
 @@ -94,6 +94,7 @@ int dram_init_banksize(void)
@@ -29,7 +29,7 @@ index b8a71504be..34c5c61a5f 100644
  	if (port == &port1) {
  		debug("Setup pd switch on port 1\n");
  		return setup_pd_switch(2, 0x72, have_battery);
-@@ -616,6 +619,53 @@ void board_late_mmc_env_init(void)
+@@ -620,6 +623,53 @@ void board_late_mmc_env_init(void)
  }
  #endif
  
@@ -84,7 +84,7 @@ index b8a71504be..34c5c61a5f 100644
  {
  #ifdef CONFIG_ENV_IS_IN_MMC
 diff --git a/configs/kimchi_defconfig b/configs/kimchi_defconfig
-index c9c9222a4e..0abb825161 100644
+index dd1a89668e..52d51ff320 100644
 --- a/configs/kimchi_defconfig
 +++ b/configs/kimchi_defconfig
 @@ -31,6 +31,7 @@ CONFIG_CMD_CACHE=y
