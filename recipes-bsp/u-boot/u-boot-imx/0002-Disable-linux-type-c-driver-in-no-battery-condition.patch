@@ -1,7 +1,7 @@
-From ef93880d9d1b539675559e9a2f80bdeb55323b01 Mon Sep 17 00:00:00 2001
+From 52c1fbb0193c65131e03d99ff55bc0c01d113119 Mon Sep 17 00:00:00 2001
 From: Kurt Kiefer <kekiefer@gmail.com>
 Date: Wed, 19 Aug 2020 12:36:25 -0700
-Subject: [PATCH 2/2] Disable linux type-c driver in no-battery condition
+Subject: [PATCH 2/4] Disable linux type-c driver in no-battery condition
 
 ---
  board/groupgets/kimchi/kimchi.c | 50 +++++++++++++++++++++++++++++++++
@@ -9,10 +9,10 @@ Subject: [PATCH 2/2] Disable linux type-c driver in no-battery condition
  2 files changed, 51 insertions(+)
 
 diff --git a/board/groupgets/kimchi/kimchi.c b/board/groupgets/kimchi/kimchi.c
-index 3a5231d846..b5b3f95ede 100644
+index 0d54324c3d..e18f04cf73 100644
 --- a/board/groupgets/kimchi/kimchi.c
 +++ b/board/groupgets/kimchi/kimchi.c
-@@ -94,6 +94,7 @@ int dram_init_banksize(void)
+@@ -54,6 +54,7 @@ int board_early_init_f(void)
  
  #ifdef CONFIG_USB_TCPC
  struct tcpc_port port1;
@@ -20,7 +20,7 @@ index 3a5231d846..b5b3f95ede 100644
  
  static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
  {
-@@ -178,6 +179,8 @@ int pd_switch_snk_enable(struct tcpc_port *port)
+@@ -140,6 +141,8 @@ int pd_switch_snk_enable(struct tcpc_port *port)
  		have_battery = true;
  	}
  
@@ -29,7 +29,7 @@ index 3a5231d846..b5b3f95ede 100644
  	if (port == &port1) {
  		debug("Setup pd switch on port 1\n");
  		return setup_pd_switch(2, 0x72, have_battery);
-@@ -620,6 +623,53 @@ void board_late_mmc_env_init(void)
+@@ -297,6 +300,53 @@ void board_late_mmc_env_init(void)
  }
  #endif
  
@@ -84,17 +84,17 @@ index 3a5231d846..b5b3f95ede 100644
  {
  #ifdef CONFIG_ENV_IS_IN_MMC
 diff --git a/configs/kimchi_defconfig b/configs/kimchi_defconfig
-index dd1a89668e..52d51ff320 100644
+index 88033f4953..bf9cc71235 100644
 --- a/configs/kimchi_defconfig
 +++ b/configs/kimchi_defconfig
-@@ -31,6 +31,7 @@ CONFIG_CMD_CACHE=y
- CONFIG_CMD_REGULATOR=y
- CONFIG_CMD_MEMTEST=y
+@@ -57,6 +57,7 @@ CONFIG_CMD_EXT4_WRITE=y
+ CONFIG_CMD_FAT=y
+ CONFIG_CMD_SF=y
  CONFIG_OF_CONTROL=y
 +CONFIG_OF_BOARD_SETUP=y
- CONFIG_FASTBOOT=y
- CONFIG_USB_FUNCTION_FASTBOOT=y
- CONFIG_CMD_FASTBOOT=y
+ CONFIG_DEFAULT_DEVICE_TREE="imx8mm-kimchi"
+ CONFIG_DEFAULT_FDT_FILE="imx8mm-kimchi.dtb"
+ CONFIG_ENV_IS_IN_MMC=y
 -- 
-2.28.0
+2.29.2
 

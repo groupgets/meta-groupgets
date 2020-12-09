@@ -1,0 +1,321 @@
+From cfb48a936f7c0ba725897dd2440b7d04b1a771dd Mon Sep 17 00:00:00 2001
+From: Kurt Kiefer <kekiefer@gmail.com>
+Date: Sun, 30 Aug 2020 21:11:52 -0700
+Subject: [PATCH 4/4] set battery chemistry at boot
+
+---
+ board/groupgets/kimchi/Makefile      |   1 +
+ board/groupgets/kimchi/bq27426_ops.c | 192 +++++++++++++++++++++++++++
+ board/groupgets/kimchi/kimchi.c      |  42 +++---
+ 3 files changed, 208 insertions(+), 27 deletions(-)
+ create mode 100644 board/groupgets/kimchi/bq27426_ops.c
+
+diff --git a/board/groupgets/kimchi/Makefile b/board/groupgets/kimchi/Makefile
+index 6831d5608b..b04f260e8e 100644
+--- a/board/groupgets/kimchi/Makefile
++++ b/board/groupgets/kimchi/Makefile
+@@ -13,4 +13,5 @@ endif
+ 
+ ifndef CONFIG_SPL_BUILD
+ obj-$(CONFIG_USB_TCPC) += tcpc.o
++obj-y += bq27426_ops.o
+ endif
+diff --git a/board/groupgets/kimchi/bq27426_ops.c b/board/groupgets/kimchi/bq27426_ops.c
+new file mode 100644
+index 0000000000..bf5b0a3af4
+--- /dev/null
++++ b/board/groupgets/kimchi/bq27426_ops.c
+@@ -0,0 +1,192 @@
++#include <common.h>
++#include <errno.h>
++#include <asm/io.h>
++#include <asm/mach-imx/mxc_i2c.h>
++#include <asm/arch/clock.h>
++
++static int bq27426_cmd(struct udevice *i2c_dev, uint16_t ctrl)
++{
++	int ret;
++	ret = dm_i2c_write(i2c_dev, 0x0, (const uint8_t *)&ctrl, sizeof(ctrl));
++	if (ret) {
++		printf("%s dm_i2c_write failed, err %d\n", __func__, ret);
++		return -EIO;
++	}
++	udelay(100);
++
++	return 0;
++}
++
++static int bq27426_ctrl_write(struct udevice *i2c_dev, uint16_t ctrl, uint8_t *val, int size)
++{
++	int ret;
++
++	ret = dm_i2c_write(i2c_dev, 0x0, (const uint8_t *)&ctrl, sizeof(ctrl));
++	if (ret) {
++		printf("%s dm_i2c_write failed, err %d\n", __func__, ret);
++		return -EIO;
++	}
++
++	ret = dm_i2c_write(i2c_dev, 0x0, val, size);
++	if (ret) {
++		printf("%s dm_i2c_write failed, err %d\n", __func__, ret);
++		return -EIO;
++	}
++
++	return 0;
++}
++
++static int bq27426_ctrl_read(struct udevice *i2c_dev, uint16_t ctrl, uint8_t *val, int size)
++{
++	int ret;
++
++	ret = dm_i2c_write(i2c_dev, 0x0, (const uint8_t *)&ctrl, sizeof(ctrl));
++	if (ret) {
++		printf("%s dm_i2c_write failed, err %d\n", __func__, ret);
++		return -EIO;
++	}
++
++	ret = dm_i2c_read(i2c_dev, 0x0, val, size);
++	if (ret) {
++		printf("%s dm_i2c_read failed, err %d\n", __func__, ret);
++		return -EIO;
++	}
++
++	return 0;
++}
++
++static int bq27426_poll_status(struct udevice *i2c_dev, uint16_t mask, uint16_t value)
++{
++	int ret;
++	uint16_t flags;
++	ulong start = get_timer(0);
++
++	do {
++		ret = dm_i2c_read(i2c_dev, 0x6, (const uint8_t *)&flags, sizeof(flags));
++		if (ret) {
++			printf("%s dm_i2c_read failed, err %d\n", __func__, ret);
++			return -EIO;
++		}
++
++		if ((flags & mask) == value)
++			return 0;
++
++	} while (get_timer(start) < 1000);
++
++	printf("%s timed out waiting for status %x/%x, flags=%x\n", __func__, mask, value, flags);
++	return -ETIMEDOUT;
++}
++
++int setup_bq27426(int i2c_bus, uint8_t addr)
++{
++	struct udevice *bus;
++	struct udevice *i2c_dev = NULL;
++	int ret;
++	uint16_t flags;
++	uint16_t chem_id;
++	uint16_t ctrl_status;
++
++	ret = uclass_get_device_by_seq(UCLASS_I2C, i2c_bus, &bus);
++	if (ret) {
++		printf("%s: Can't find bus\n", __func__);
++		return -EINVAL;
++	}
++
++	ret = dm_i2c_probe(bus, addr, 0, &i2c_dev);
++	if (ret) {
++		printf("%s: Can't find device id=0x%x\n",
++			__func__, addr);
++		return -ENODEV;
++	}
++
++#if 0
++	/* is there a battery? */
++	ret = bq27426_ctrl_read(i2c_dev, 0x0000, (const uint8_t *)&flags, sizeof(flags));
++	if (ret)
++		return ret;
++
++	printf("%s: Control status %x\n", __func__, flags);
++
++	if (!(flags & 0x2)) // VOK
++		return -ENODEV;
++#else
++	ret = bq27426_poll_status(i2c_dev, 0x0008, 0x0008);
++	if (ret) {
++		printf("%s: Battery not detected\n", __func__);
++		return -ENODEV;
++	}
++#endif
++
++	/* read current chemistry id */
++	ret = bq27426_ctrl_read(i2c_dev, 0x0008, (const uint8_t *)&chem_id, sizeof(chem_id));
++	if (ret)
++		return ret;
++
++	printf("%s: Chemistry ID %x\n", __func__, chem_id);
++
++	/* do we have the 4.2V profile set already? */
++	if (chem_id == 0x1202) {
++		printf("%s: Chemistry 1202 already set\n", __func__);
++		return 0;
++	}
++
++	/* is the gauge sealed? */
++	ret = bq27426_ctrl_read(i2c_dev, 0x0000, (const uint8_t *)&ctrl_status, sizeof(ctrl_status));
++	if (ret)
++		return ret;
++
++	if (ctrl_status & 0x2000) {
++		/* unseal gauge by writing 0x8000 twice */
++		ret = bq27426_cmd(i2c_dev, 0x8000);
++		if (ret)
++			return ret;
++
++		ret = bq27426_cmd(i2c_dev, 0x8000);
++		if (ret)
++			return ret;
++	}
++
++	/* set CFGUPDATE */
++	ret = bq27426_cmd(i2c_dev, 0x0013);
++	if (ret)
++		return ret;
++
++	/* wait for flags to be set */
++	ret = bq27426_poll_status(i2c_dev, 0x0010, 0x0010);
++	if (ret)
++		return ret;
++
++	/* set chem_id 1202 */
++	ret = bq27426_cmd(i2c_dev, 0x0031);
++	if (ret)
++		return ret;
++
++	/* Exit CFGUPDATE mode by sending the SOFT_RESET subcommand */
++	ret = bq27426_cmd(i2c_dev, 0x0042);
++	if (ret)
++		return ret;
++
++	/* wait for flags to be clear */
++	ret = bq27426_poll_status(i2c_dev, 0x0010, 0x0000);
++	if (ret)
++		return ret;
++
++	/* Read Current Chem ID to see if it is updated */
++	ret = bq27426_ctrl_read(i2c_dev, 0x0008, (const uint8_t *)&chem_id, sizeof(chem_id));
++	if (ret)
++		return ret;
++
++	/* do we have the 4.2V profile set already? */
++	if (chem_id != 0x1202) {
++		printf("%s: Chemistry 1202 was not able to be set\n", __func__);
++		return -EACCES;
++	}
++
++	printf("%s: Chemistry ID after set: %x\n", __func__, chem_id);
++
++	if (ctrl_status & 0x2000) {
++		ret = bq27426_cmd(i2c_dev, 0x0020);
++		if (ret)
++			return ret;
++	}
++}
+diff --git a/board/groupgets/kimchi/kimchi.c b/board/groupgets/kimchi/kimchi.c
+index e18f04cf73..f696fff3bf 100644
+--- a/board/groupgets/kimchi/kimchi.c
++++ b/board/groupgets/kimchi/kimchi.c
+@@ -25,6 +25,8 @@
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
++int setup_bq27426(int i2c_bus, uint8_t addr);
++
+ #define UART_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_FSEL1)
+ #define WDOG_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_ODE | PAD_CTL_PUE | PAD_CTL_PE)
+ 
+@@ -53,10 +55,10 @@ int board_early_init_f(void)
+ }
+ 
+ #ifdef CONFIG_USB_TCPC
+-struct tcpc_port port1;
+ static bool system_has_battery;
++struct tcpc_port port1;
+ 
+-static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
++static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr)
+ {
+ 	struct udevice *bus;
+ 	struct udevice *i2c_dev = NULL;
+@@ -85,7 +87,7 @@ static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
+ 
+ 	if ((status & 0x7) == 0) {
+ 		printf("%s starting in dead/no battery condition\n", __func__);
+-		have_battery = false;
++		system_has_battery = false;
+ 
+ #ifdef CONFIG_KIMCHI_FORCE_ENABLE_BATTERY
+ 		printf("%s exiting dead battery mode\n", __func__);
+@@ -103,10 +105,10 @@ static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
+ 			return -EIO;
+ 		}
+ 
+-		have_battery = true;
++		system_has_battery = true;
+ #endif
+ 	} else {
+-		have_battery = true;
++		system_has_battery = true;
+ 	}
+ 
+ 	/* Set OVP threshold to 6V */
+@@ -122,30 +124,9 @@ static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
+ 
+ int pd_switch_snk_enable(struct tcpc_port *port)
+ {
+-	struct udevice *bus;
+-	struct udevice *i2c_dev = NULL;
+-	int ret;
+-	uint8_t valb;
+-
+-	ret = uclass_get_device_by_seq(UCLASS_I2C, 0, &bus);
+-	if (ret) {
+-		printf("%s: Can't find bus\n", __func__);
+-		return -EINVAL;
+-	}
+-
+-	ret = dm_i2c_probe(bus, 0x55, 0, &i2c_dev);
+-	if (ret) {
+-		debug("%s: Did not find bq72xxx @ bus=0 id=0x55\n", __func__);
+-		have_battery = false;
+-	} else {
+-		have_battery = true;
+-	}
+-
+-	system_has_battery = have_battery;
+-
+ 	if (port == &port1) {
+ 		debug("Setup pd switch on port 1\n");
+-		return setup_pd_switch(2, 0x72, have_battery);
++		return setup_pd_switch(2, 0x72);
+ 	} else
+ 		return -EINVAL;
+ }
+@@ -249,10 +230,17 @@ int board_ehci_usb_phy_mode(struct udevice *dev)
+ 
+ int board_init(void)
+ {
++	int ret;
++
+ #ifdef CONFIG_LED
+ 	led_default_state();
+ #endif
+ 
++	ret = setup_bq27426(0, 0x55);
++	if (ret) {
++		printf("setup_bq27426 returns %d\n", ret);
++	}
++
+ #ifdef CONFIG_USB_TCPC
+ 	setup_typec();
+ #endif
+-- 
+2.29.2
+
