@@ -1,4 +1,4 @@
-From cfb48a936f7c0ba725897dd2440b7d04b1a771dd Mon Sep 17 00:00:00 2001
+From d8af914c40e92e2fc05d8ba941a475bb4b15d49d Mon Sep 17 00:00:00 2001
 From: Kurt Kiefer <kekiefer@gmail.com>
 Date: Sun, 30 Aug 2020 21:11:52 -0700
 Subject: [PATCH 4/4] set battery chemistry at boot

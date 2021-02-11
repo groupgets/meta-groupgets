@@ -1,4 +1,4 @@
-From 43671071bc21159bae772546a76c8ca51f510967 Mon Sep 17 00:00:00 2001
+From 2412532d150fe6814ee9860b003fce993b0a91f5 Mon Sep 17 00:00:00 2001
 From: Kurt Kiefer <kekiefer@gmail.com>
 Date: Wed, 29 Jul 2020 21:52:42 -0700
 Subject: [PATCH 1/4] patching for kimchi
@@ -32,18 +32,18 @@ Subject: [PATCH 1/4] patching for kimchi
  create mode 100644 include/configs/kimchi.h
 
 diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
-index 81ac2569c6..cb75c70530 100644
+index 0d24acd457..07df74f7eb 100644
 --- a/arch/arm/dts/Makefile
 +++ b/arch/arm/dts/Makefile
-@@ -787,6 +787,7 @@ dtb-$(CONFIG_ARCH_IMX8M) += \
+@@ -788,6 +788,7 @@ dtb-$(CONFIG_ARCH_IMX8M) += \
  	imx8mm-ddr3l-val.dtb \
  	imx8mm-ddr4-val.dtb \
  	imx8mm-verdin.dtb \
 +	imx8mm-kimchi.dtb \
+ 	imx8mn-ddr3l-evk.dtb \
  	imx8mn-ddr4-evk.dtb \
  	imx8mn-evk.dtb \
- 	imx8mq-ddr3l-val.dtb \
-@@ -798,6 +799,7 @@ dtb-$(CONFIG_ARCH_IMX8M) += \
+@@ -801,6 +802,7 @@ dtb-$(CONFIG_ARCH_IMX8M) += \
  	imx8mn-ddr4-ab2.dtb \
  	imx8mn-ab2.dtb
  
@@ -651,10 +651,10 @@ index 0000000000..5a06de4192
 +
 +#include "imx8mm-kimchi-u-boot.dtsi"
 diff --git a/arch/arm/mach-imx/imx8m/Kconfig b/arch/arm/mach-imx/imx8m/Kconfig
-index 450cecb675..f872387d87 100644
+index 41c68a49a3..bfdb932696 100644
 --- a/arch/arm/mach-imx/imx8m/Kconfig
 +++ b/arch/arm/mach-imx/imx8m/Kconfig
-@@ -136,6 +136,12 @@ config TARGET_VERDIN_IMX8MM
+@@ -154,6 +154,12 @@ config TARGET_VERDIN_IMX8MM
         select SUPPORT_SPL
         select IMX8M_LPDDR4
  
@@ -667,7 +667,7 @@ index 450cecb675..f872387d87 100644
  endchoice
  
  source "board/freescale/imx8mq_evk/Kconfig"
-@@ -146,5 +152,6 @@ source "board/freescale/imx8mm_val/Kconfig"
+@@ -164,5 +170,6 @@ source "board/freescale/imx8mm_val/Kconfig"
  source "board/freescale/imx8mn_evk/Kconfig"
  source "board/freescale/imx8mp_evk/Kconfig"
  source "board/toradex/verdin-imx8mm/Kconfig"
@@ -3302,11 +3302,11 @@ index 0000000000..88033f4953
 +CONFIG_SYSCON=y
 +CONFIG_DM_RESET=y
 diff --git a/include/configs/imx8mm_evk.h b/include/configs/imx8mm_evk.h
-index 0f0c1b2f11..423360ae0a 100644
+index d01ce0c6a0..ee34137fba 100644
 --- a/include/configs/imx8mm_evk.h
 +++ b/include/configs/imx8mm_evk.h
-@@ -35,6 +35,9 @@
- #define CONFIG_POWER_BD71837
+@@ -39,6 +39,9 @@
+ #endif
  
  #define CONFIG_SYS_I2C
 +#define CONFIG_SYS_I2C_MXC_I2C1		/* enable I2C bus 1 */
