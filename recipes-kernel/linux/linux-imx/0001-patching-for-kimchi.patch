@@ -1,12 +1,12 @@
-From b363804733e66103eda8b14516fc079242f5bdea Mon Sep 17 00:00:00 2001
+From fbfc46e4b79c8ae145a5b15dc061c7c98d2815aa Mon Sep 17 00:00:00 2001
 From: Kurt Kiefer <kekiefer@gmail.com>
 Date: Thu, 9 Jan 2020 13:23:28 -0800
 Subject: [PATCH] patching for kimchi
 
 ---
  arch/arm64/boot/dts/freescale/Makefile        |   1 +
- .../boot/dts/freescale/imx8mm-kimchi.dts      | 590 ++++++++++++++++++
- 2 files changed, 591 insertions(+)
+ .../boot/dts/freescale/imx8mm-kimchi.dts      | 575 ++++++++++++++++++
+ 2 files changed, 576 insertions(+)
  create mode 100755 arch/arm64/boot/dts/freescale/imx8mm-kimchi.dts
 
 diff --git a/arch/arm64/boot/dts/freescale/Makefile b/arch/arm64/boot/dts/freescale/Makefile
@@ -23,10 +23,10 @@ index 7b27addc96035..b4de464e09bf8 100644
  			  imx8mn-evk-ak5558.dtb imx8mn-evk-rpmsg.dtb imx8mn-evk-8mic-revE.dtb
 diff --git a/arch/arm64/boot/dts/freescale/imx8mm-kimchi.dts b/arch/arm64/boot/dts/freescale/imx8mm-kimchi.dts
 new file mode 100755
-index 0000000000000..35ace68f51184
+index 0000000000000..607725bddac9e
 --- /dev/null
 +++ b/arch/arm64/boot/dts/freescale/imx8mm-kimchi.dts
-@@ -0,0 +1,590 @@
+@@ -0,0 +1,575 @@
 +/*
 + * Copyright 2018 NXP
 + *
@@ -89,46 +89,23 @@ index 0000000000000..35ace68f51184
 +		};
 +	};
 +
-+	usb_reset: usb-reset {
-+		compatible = "gpio-reset";
-+		reset-gpios = <&gpio5 0 GPIO_ACTIVE_LOW>;
-+		reset-delay-us = <2000>;
-+		reset-post-delay-ms = <40>;
-+		#reset-cells = <0>;
++	reg_usdhc2_vmmc: regulator-usdhc2 {
++		compatible = "regulator-fixed";
++		regulator-name = "VSD_3V3";
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++		regulator-always-on;
 +	};
 +
-+	regulators {
-+		compatible = "simple-bus";
-+		#address-cells = <1>;
-+		#size-cells = <0>;
-+
-+		reg_usdhc2_vmmc: regulator-usdhc2 {
-+			compatible = "regulator-fixed";
-+			regulator-name = "VSD_3V3";
-+			regulator-min-microvolt = <3300000>;
-+			regulator-max-microvolt = <3300000>;
-+			regulator-always-on;
-+		};
-+
-+		reg_usb1_vbus: regulator-usb1-vbus {
-+			compatible = "regulator-fixed";
-+			regulator-name = "VBUS1";
-+			regulator-min-microvolt = <5000000>;
-+			regulator-max-microvolt = <5000000>;
-+			gpio = <&gpio5 11 GPIO_ACTIVE_HIGH>;
-+			enable-active-high;
-+		};
-+
-+		reg_pcie_3v3: regulator-pcie-3v3 {
-+			compatible = "regulator-fixed";
-+			regulator-name = "PCIE_3V3";
-+			pinctrl-names = "default";
-+			pinctrl-0 = <&pinctrl_pcie_reg>;
-+			regulator-min-microvolt = <3300000>;
-+			regulator-max-microvolt = <3300000>;
-+			gpio = <&gpio4 10 GPIO_ACTIVE_HIGH>;
-+			enable-active-high;
-+		};
++	reg_pcie_3v3: regulator-pcie-3v3 {
++		compatible = "regulator-fixed";
++		regulator-name = "PCIE_3V3";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_pcie_reg>;
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++		gpio = <&gpio4 10 GPIO_ACTIVE_HIGH>;
++		enable-active-high;
 +	};
 +
 +	/*
@@ -204,14 +181,15 @@ index 0000000000000..35ace68f51184
 +};
 +
 +&usbotg1 {
++	#address-cells = <1>;
++	#size-cells = <0>;
++
 +	dr_mode = "otg";
-+	hnp-disable;
-+	srp-disable;
-+	adp-disable;
-+	usb-role-switch;
 +	status = "okay";
 +
-+	port {
++	port@0  {
++		reg = <0>;
++
 +		usb1_drd_sw: endpoint {
 +			remote-endpoint = <&typec1_dr_sw>;
 +		};
@@ -222,7 +200,6 @@ index 0000000000000..35ace68f51184
 +	dr_mode = "host";
 +	disable-over-current;
 +	status = "okay";
-+	resets = <&usb_reset>;
 +};
 +
 +&usdhc1 {
@@ -394,12 +371,6 @@ index 0000000000000..35ace68f51184
 +		interrupts = <6 8>;
 +		status = "okay";
 +
-+		port {
-+			typec1_dr_sw: endpoint {
-+				remote-endpoint = <&usb1_drd_sw>;
-+			};
-+		};
-+
 +		typec1_con: connector {
 +			compatible = "usb-c-connector";
 +			label = "USB-C";
@@ -411,6 +382,20 @@ index 0000000000000..35ace68f51184
 +			sink-pdos = <PDO_FIXED(5000, 3000,
 +						 PDO_FIXED_USB_COMM)>;
 +			op-sink-microwatt = <15000000>;
++
++
++			ports {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				port@0 {
++					reg = <0>;
++
++					typec1_dr_sw: endpoint {
++						remote-endpoint = <&usb1_drd_sw>;
++					};
++				};
++			};
 +		};
 +	};
 +};
