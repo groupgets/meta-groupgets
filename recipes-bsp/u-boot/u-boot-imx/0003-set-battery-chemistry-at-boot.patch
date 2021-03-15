@@ -1,13 +1,13 @@
-From d8af914c40e92e2fc05d8ba941a475bb4b15d49d Mon Sep 17 00:00:00 2001
+From 6196bbcaeaef42a894b52dcec1e1bd3e3ba62ee4 Mon Sep 17 00:00:00 2001
 From: Kurt Kiefer <kekiefer@gmail.com>
 Date: Sun, 30 Aug 2020 21:11:52 -0700
-Subject: [PATCH 4/4] set battery chemistry at boot
+Subject: [PATCH 3/3] set battery chemistry at boot
 
 ---
  board/groupgets/kimchi/Makefile      |   1 +
  board/groupgets/kimchi/bq27426_ops.c | 192 +++++++++++++++++++++++++++
- board/groupgets/kimchi/kimchi.c      |  42 +++---
- 3 files changed, 208 insertions(+), 27 deletions(-)
+ board/groupgets/kimchi/kimchi.c      |  37 ++----
+ 3 files changed, 204 insertions(+), 26 deletions(-)
  create mode 100644 board/groupgets/kimchi/bq27426_ops.c
 
 diff --git a/board/groupgets/kimchi/Makefile b/board/groupgets/kimchi/Makefile
@@ -219,7 +219,7 @@ index 0000000000..bf5b0a3af4
 +	}
 +}
 diff --git a/board/groupgets/kimchi/kimchi.c b/board/groupgets/kimchi/kimchi.c
-index e18f04cf73..f696fff3bf 100644
+index 0d54324c3d..d2436d06db 100644
 --- a/board/groupgets/kimchi/kimchi.c
 +++ b/board/groupgets/kimchi/kimchi.c
 @@ -25,6 +25,8 @@
@@ -231,42 +231,36 @@ index e18f04cf73..f696fff3bf 100644
  #define UART_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_FSEL1)
  #define WDOG_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_ODE | PAD_CTL_PUE | PAD_CTL_PE)
  
-@@ -53,10 +55,10 @@ int board_early_init_f(void)
- }
- 
+@@ -55,7 +57,7 @@ int board_early_init_f(void)
  #ifdef CONFIG_USB_TCPC
--struct tcpc_port port1;
- static bool system_has_battery;
-+struct tcpc_port port1;
+ struct tcpc_port port1;
  
 -static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
 +static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr)
  {
  	struct udevice *bus;
  	struct udevice *i2c_dev = NULL;
-@@ -85,7 +87,7 @@ static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
+@@ -84,7 +86,6 @@ static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
  
  	if ((status & 0x7) == 0) {
  		printf("%s starting in dead/no battery condition\n", __func__);
 -		have_battery = false;
-+		system_has_battery = false;
  
  #ifdef CONFIG_KIMCHI_FORCE_ENABLE_BATTERY
  		printf("%s exiting dead battery mode\n", __func__);
-@@ -103,10 +105,10 @@ static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
+@@ -101,11 +102,7 @@ static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
+ 			printf("%s dm_i2c_write failed, err %d\n", __func__, ret);
  			return -EIO;
  		}
- 
+-
 -		have_battery = true;
-+		system_has_battery = true;
  #endif
- 	} else {
+-	} else {
 -		have_battery = true;
-+		system_has_battery = true;
  	}
  
  	/* Set OVP threshold to 6V */
-@@ -122,30 +124,9 @@ static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
+@@ -121,28 +118,9 @@ static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
  
  int pd_switch_snk_enable(struct tcpc_port *port)
  {
@@ -289,8 +283,6 @@ index e18f04cf73..f696fff3bf 100644
 -		have_battery = true;
 -	}
 -
--	system_has_battery = have_battery;
--
  	if (port == &port1) {
  		debug("Setup pd switch on port 1\n");
 -		return setup_pd_switch(2, 0x72, have_battery);
@@ -298,7 +290,7 @@ index e18f04cf73..f696fff3bf 100644
  	} else
  		return -EINVAL;
  }
-@@ -249,10 +230,17 @@ int board_ehci_usb_phy_mode(struct udevice *dev)
+@@ -246,10 +224,17 @@ int board_ehci_usb_phy_mode(struct udevice *dev)
  
  int board_init(void)
  {
