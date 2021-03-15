@@ -1,0 +1,35 @@
+From 2662a257f85b96c94db33283c82f68f911abc917 Mon Sep 17 00:00:00 2001
+From: Kurt Kiefer <kekiefer@gmail.com>
+Date: Tue, 9 Mar 2021 14:17:23 -0800
+Subject: [PATCH 2/2] usb: typec: tcpm: don't reset bus-powered devices during
+ init
+
+If the device is not self powered, we should not reset the port,
+since this will cause the source to remove vbus power.
+
+Signed-off-by: Kurt Kiefer <kekiefer@gmail.com>
+---
+ drivers/usb/typec/tcpm/tcpm.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/drivers/usb/typec/tcpm/tcpm.c b/drivers/usb/typec/tcpm/tcpm.c
+index 14f5c7fc8c205..4139e0f8d63b8 100644
+--- a/drivers/usb/typec/tcpm/tcpm.c
++++ b/drivers/usb/typec/tcpm/tcpm.c
+@@ -4412,6 +4412,13 @@ static void tcpm_init(struct tcpm_port *port)
+ 	if (port->tcpc->get_cc(port->tcpc, &cc1, &cc2) == 0)
+ 		_tcpm_cc_change(port, cc1, cc2);
+ 
++	/*
++	 * If the device is not self powered, we should not reset the port,
++	 * since this will cause the source to remove vbus power.
++	 */
++	if (port->vbus_present && !port->self_powered)
++		return;
++
+ 	/*
+ 	 * Some adapters need a clean slate at startup, and won't recover
+ 	 * otherwise. So do not try to be fancy and force a clean disconnect.
+-- 
+2.29.2
+

@@ -1,12 +1,12 @@
-From fbfc46e4b79c8ae145a5b15dc061c7c98d2815aa Mon Sep 17 00:00:00 2001
+From 731e48c5a0e4a77830dba9126627793d056c7f2f Mon Sep 17 00:00:00 2001
 From: Kurt Kiefer <kekiefer@gmail.com>
 Date: Thu, 9 Jan 2020 13:23:28 -0800
-Subject: [PATCH] patching for kimchi
+Subject: [PATCH 1/2] patching for kimchi
 
 ---
  arch/arm64/boot/dts/freescale/Makefile        |   1 +
- .../boot/dts/freescale/imx8mm-kimchi.dts      | 575 ++++++++++++++++++
- 2 files changed, 576 insertions(+)
+ .../boot/dts/freescale/imx8mm-kimchi.dts      | 581 ++++++++++++++++++
+ 2 files changed, 582 insertions(+)
  create mode 100755 arch/arm64/boot/dts/freescale/imx8mm-kimchi.dts
 
 diff --git a/arch/arm64/boot/dts/freescale/Makefile b/arch/arm64/boot/dts/freescale/Makefile
@@ -23,10 +23,10 @@ index 7b27addc96035..b4de464e09bf8 100644
  			  imx8mn-evk-ak5558.dtb imx8mn-evk-rpmsg.dtb imx8mn-evk-8mic-revE.dtb
 diff --git a/arch/arm64/boot/dts/freescale/imx8mm-kimchi.dts b/arch/arm64/boot/dts/freescale/imx8mm-kimchi.dts
 new file mode 100755
-index 0000000000000..607725bddac9e
+index 0000000000000..5b4ec1c5e42c9
 --- /dev/null
 +++ b/arch/arm64/boot/dts/freescale/imx8mm-kimchi.dts
-@@ -0,0 +1,575 @@
+@@ -0,0 +1,581 @@
 +/*
 + * Copyright 2018 NXP
 + *
@@ -181,15 +181,16 @@ index 0000000000000..607725bddac9e
 +};
 +
 +&usbotg1 {
-+	#address-cells = <1>;
-+	#size-cells = <0>;
-+
 +	dr_mode = "otg";
++	hnp-disable;
++	srp-disable;
++	adp-disable;
++	usb-role-switch;
++	picophy,pre-emp-curr-control = <3>;
++	picophy,dc-vol-level-adjust = <7>;
 +	status = "okay";
 +
-+	port@0  {
-+		reg = <0>;
-+
++	port {
 +		usb1_drd_sw: endpoint {
 +			remote-endpoint = <&typec1_dr_sw>;
 +		};
@@ -371,6 +372,17 @@ index 0000000000000..607725bddac9e
 +		interrupts = <6 8>;
 +		status = "okay";
 +
++		/* Contrary to the documentation for 'nxp,ptn5110', this
++		 * platform needs to have this type-c port controller and
++		 * the usb controller connected in the port graph for dual
++		 * role switching to work properly
++		 */
++		port {
++			typec1_dr_sw: endpoint {
++				remote-endpoint = <&usb1_drd_sw>;
++			};
++		};
++
 +		typec1_con: connector {
 +			compatible = "usb-c-connector";
 +			label = "USB-C";
@@ -383,18 +395,12 @@ index 0000000000000..607725bddac9e
 +						 PDO_FIXED_USB_COMM)>;
 +			op-sink-microwatt = <15000000>;
 +
-+
-+			ports {
-+				#address-cells = <1>;
-+				#size-cells = <0>;
-+
-+				port@0 {
-+					reg = <0>;
-+
-+					typec1_dr_sw: endpoint {
-+						remote-endpoint = <&usb1_drd_sw>;
-+					};
-+				};
++			port {
++				/* we don't need to handle a type-c mux on this port
++				 * so the endpoint here can be blank. Including the
++				 * port node in the first place simply supresses
++				 * warnings at boot.
++				 */
 +			};
 +		};
 +	};
