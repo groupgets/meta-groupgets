@@ -1,7 +1,7 @@
 From 2662a257f85b96c94db33283c82f68f911abc917 Mon Sep 17 00:00:00 2001
 From: Kurt Kiefer <kekiefer@gmail.com>
 Date: Tue, 9 Mar 2021 14:17:23 -0800
-Subject: [PATCH 2/2] usb: typec: tcpm: don't reset bus-powered devices during
+Subject: [PATCH 2/3] usb: typec: tcpm: don't reset bus-powered devices during
  init
 
 If the device is not self powered, we should not reset the port,
