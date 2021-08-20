@@ -5,4 +5,5 @@ SRC_URI_append_kimchi = "\
     file://wifi.cfg \
     file://spi.cfg \
     file://audio.cfg \
+    file://usb-cdc.cfg \
 "
