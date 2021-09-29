@@ -228,7 +228,7 @@ index 0d54324c3d..d2436d06db 100644
  
 +int setup_bq27426(int i2c_bus, uint8_t addr);
 +
- #define UART_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_FSEL1)
+ #define UART_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_FSEL1 | PAD_CTL_PUE | PAD_CTL_PE)
  #define WDOG_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_ODE | PAD_CTL_PUE | PAD_CTL_PE)
  
 @@ -55,7 +57,7 @@ int board_early_init_f(void)
