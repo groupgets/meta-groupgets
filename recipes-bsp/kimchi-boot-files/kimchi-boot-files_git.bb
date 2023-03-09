@@ -1,7 +1,7 @@
 LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://LICENSE;md5=1823afa6f078173068954960b9de81f6"
 
-SRC_URI = "git://github.com/groupgets/kimchi-boot-files.git"
+SRC_URI = "git://github.com/groupgets/kimchi-boot-files.git;protocol=https;branch=master"
 
 PV = "1.0+git${SRCPV}"
 SRCREV = "${AUTOREV}"

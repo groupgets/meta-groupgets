@@ -1,4 +1,4 @@
-SRC_URI = "git://github.com/groupgets/kimchi-boot-files.git"
+SRC_URI = "git://github.com/groupgets/kimchi-boot-files.git;protocol=https;branch=master"
 
 PV = "1.0+git${SRCPV}"
 SRCREV = "${AUTOREV}"
