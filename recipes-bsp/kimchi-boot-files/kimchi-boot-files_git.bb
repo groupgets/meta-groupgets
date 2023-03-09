@@ -22,7 +22,7 @@ do_install () {
 	install ${B}/output/* ${D}/boot/
 }
 
-FILES_${PN} += "/boot"
+FILES:${PN} += "/boot"
 
 do_deploy () {
     # we really want these files to go to the deploy directory so they can be used by wic

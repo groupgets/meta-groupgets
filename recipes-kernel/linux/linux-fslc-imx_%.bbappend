@@ -1,6 +1,6 @@
-FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
-SRC_URI_append_kimchi = "\
+SRC_URI:append:kimchi = "\
     file://0001-usb-typec-tcpm-don-t-reset-bus-powered-devices-durin.patch \
     file://wifi.cfg \
     file://spi.cfg \
