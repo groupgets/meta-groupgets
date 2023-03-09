@@ -1,8 +1,4 @@
 FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
-  
-SRC_URI:append:mxenc = "\
-    file://0001-patching-for-mxenc.patch \
-"
 
 SRC_URI:append:kimchi = "\
     file://0001-patching-for-kimchi.patch \

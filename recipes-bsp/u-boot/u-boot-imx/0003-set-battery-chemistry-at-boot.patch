@@ -1,4 +1,4 @@
-From 6196bbcaeaef42a894b52dcec1e1bd3e3ba62ee4 Mon Sep 17 00:00:00 2001
+From 83758c514a2953c360555a11841ff33ba3a4bbdd Mon Sep 17 00:00:00 2001
 From: Kurt Kiefer <kekiefer@gmail.com>
 Date: Sun, 30 Aug 2020 21:11:52 -0700
 Subject: [PATCH 3/3] set battery chemistry at boot
@@ -219,10 +219,10 @@ index 0000000000..bf5b0a3af4
 +	}
 +}
 diff --git a/board/groupgets/kimchi/kimchi.c b/board/groupgets/kimchi/kimchi.c
-index 0d54324c3d..d2436d06db 100644
+index 5dc8333148..ae4ff160f1 100644
 --- a/board/groupgets/kimchi/kimchi.c
 +++ b/board/groupgets/kimchi/kimchi.c
-@@ -25,6 +25,8 @@
+@@ -24,6 +24,8 @@
  
  DECLARE_GLOBAL_DATA_PTR;
  
@@ -231,7 +231,7 @@ index 0d54324c3d..d2436d06db 100644
  #define UART_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_FSEL1 | PAD_CTL_PUE | PAD_CTL_PE)
  #define WDOG_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_ODE | PAD_CTL_PUE | PAD_CTL_PE)
  
-@@ -55,7 +57,7 @@ int board_early_init_f(void)
+@@ -54,7 +56,7 @@ int board_early_init_f(void)
  #ifdef CONFIG_USB_TCPC
  struct tcpc_port port1;
  
@@ -240,7 +240,7 @@ index 0d54324c3d..d2436d06db 100644
  {
  	struct udevice *bus;
  	struct udevice *i2c_dev = NULL;
-@@ -84,7 +86,6 @@ static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
+@@ -83,7 +85,6 @@ static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
  
  	if ((status & 0x7) == 0) {
  		printf("%s starting in dead/no battery condition\n", __func__);
@@ -248,7 +248,7 @@ index 0d54324c3d..d2436d06db 100644
  
  #ifdef CONFIG_KIMCHI_FORCE_ENABLE_BATTERY
  		printf("%s exiting dead battery mode\n", __func__);
-@@ -101,11 +102,7 @@ static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
+@@ -100,11 +101,7 @@ static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
  			printf("%s dm_i2c_write failed, err %d\n", __func__, ret);
  			return -EIO;
  		}
@@ -260,7 +260,7 @@ index 0d54324c3d..d2436d06db 100644
  	}
  
  	/* Set OVP threshold to 6V */
-@@ -121,28 +118,9 @@ static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
+@@ -120,28 +117,9 @@ static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
  
  int pd_switch_snk_enable(struct tcpc_port *port)
  {
@@ -290,7 +290,7 @@ index 0d54324c3d..d2436d06db 100644
  	} else
  		return -EINVAL;
  }
-@@ -246,10 +224,17 @@ int board_ehci_usb_phy_mode(struct udevice *dev)
+@@ -235,10 +213,17 @@ int board_ehci_usb_phy_mode(struct udevice *dev)
  
  int board_init(void)
  {
@@ -309,5 +309,5 @@ index 0d54324c3d..d2436d06db 100644
  	setup_typec();
  #endif
 -- 
-2.29.2
+2.37.1 (Apple Git-137.1)
 

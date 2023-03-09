@@ -1,4 +1,4 @@
-From 7161a19d190a448fdc513097db9fc7b36096d4b0 Mon Sep 17 00:00:00 2001
+From db55647dec67b9d39e430d50730339bbf8b2da68 Mon Sep 17 00:00:00 2001
 From: Kurt Kiefer <kekiefer@gmail.com>
 Date: Sun, 23 Aug 2020 14:14:26 -0700
 Subject: [PATCH 2/3] update memory timings
@@ -135,5 +135,5 @@ index 5068fa7a32..48cc92f359 100644
  	{ 0x54010, 0x1f7f },
  	{ 0x54012, 0x110 },
 -- 
-2.29.2
+2.37.1 (Apple Git-137.1)
 
