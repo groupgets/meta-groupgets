@@ -4,7 +4,7 @@ LIC_FILES_CHKSUM = "file://LICENSE;md5=1823afa6f078173068954960b9de81f6"
 SRC_URI = "git://github.com/groupgets/kimchi-boot-files.git;protocol=https;branch=master"
 
 PV = "1.0+git${SRCPV}"
-SRCREV = "${AUTOREV}"
+SRCREV = "2b2ac730a5c8c19f3e8ba1f8234aea8385fe2376"
 
 S = "${WORKDIR}/git"
 
