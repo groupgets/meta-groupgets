@@ -1,29 +1,31 @@
-From dc45d8474768046a99e2b62e9980702f5d67ba13 Mon Sep 17 00:00:00 2001
+From 4c572f32e40169d40ce92a8aad97a4072097afa6 Mon Sep 17 00:00:00 2001
 From: Kurt Kiefer <kekiefer@gmail.com>
 Date: Wed, 29 Jul 2020 21:52:42 -0700
-Subject: [PATCH 1/3] patching for kimchi
+Subject: [PATCH] patching for kimchi
 
 ---
  arch/arm/dts/Makefile                  |    1 +
- arch/arm/dts/imx8mm-kimchi-u-boot.dtsi |  157 ++
+ arch/arm/dts/imx8mm-kimchi-u-boot.dtsi |  139 ++
  arch/arm/dts/imx8mm-kimchi.dts         |  497 +++++++
  arch/arm/mach-imx/imx8m/Kconfig        |    7 +
- board/groupgets/kimchi/Kconfig         |   14 +
+ board/groupgets/kimchi/Kconfig         |   17 +
  board/groupgets/kimchi/Makefile        |   16 +
  board/groupgets/kimchi/boot.cmd        |   35 +
+ board/groupgets/kimchi/imximage.cfg    |    8 +
  board/groupgets/kimchi/kimchi.c        |  316 ++++
  board/groupgets/kimchi/lpddr4_timing.c | 1855 ++++++++++++++++++++++++
- board/groupgets/kimchi/spl.c           |  250 ++++
+ board/groupgets/kimchi/spl.c           |  270 ++++
  board/groupgets/kimchi/tcpc.c          |    1 +
  board/groupgets/kimchi/tcpc.h          |    1 +
  configs/kimchi_defconfig               |  163 +++
- include/configs/kimchi.h               |  215 +++
- 14 files changed, 3528 insertions(+)
+ include/configs/kimchi.h               |  212 +++
+ 15 files changed, 3538 insertions(+)
  create mode 100644 arch/arm/dts/imx8mm-kimchi-u-boot.dtsi
  create mode 100644 arch/arm/dts/imx8mm-kimchi.dts
  create mode 100644 board/groupgets/kimchi/Kconfig
  create mode 100644 board/groupgets/kimchi/Makefile
  create mode 100644 board/groupgets/kimchi/boot.cmd
+ create mode 100644 board/groupgets/kimchi/imximage.cfg
  create mode 100644 board/groupgets/kimchi/kimchi.c
  create mode 100644 board/groupgets/kimchi/lpddr4_timing.c
  create mode 100644 board/groupgets/kimchi/spl.c
@@ -46,14 +48,16 @@ index 709fdaecd7..785abbe71a 100644
  	imx8mn-ddr4-ab2.dtb \
 diff --git a/arch/arm/dts/imx8mm-kimchi-u-boot.dtsi b/arch/arm/dts/imx8mm-kimchi-u-boot.dtsi
 new file mode 100644
-index 0000000000..78323967f6
+index 0000000000..5285521b63
 --- /dev/null
 +++ b/arch/arm/dts/imx8mm-kimchi-u-boot.dtsi
-@@ -0,0 +1,157 @@
+@@ -0,0 +1,139 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Copyright 2019 NXP
 + */
++
++#include "imx8mm-u-boot.dtsi"
 +
 +/ {
 +	wdt-reboot {
@@ -81,43 +85,7 @@ index 0000000000..78323967f6
 +	};
 +};
 +
-+&{/soc@0} {
-+	u-boot,dm-pre-reloc;
-+	u-boot,dm-spl;
-+};
-+
-+&clk {
-+	u-boot,dm-spl;
-+	u-boot,dm-pre-reloc;
-+	/delete-property/ assigned-clocks;
-+	/delete-property/ assigned-clock-parents;
-+	/delete-property/ assigned-clock-rates;
-+};
-+
-+&osc_24m {
-+	u-boot,dm-spl;
-+	u-boot,dm-pre-reloc;
-+};
-+
-+&aips1 {
-+	u-boot,dm-spl;
-+	u-boot,dm-pre-reloc;
-+};
-+
-+&aips2 {
-+	u-boot,dm-spl;
-+};
-+
-+&aips3 {
-+	u-boot,dm-spl;
-+};
-+
-+&iomuxc {
-+	u-boot,dm-spl;
-+};
-+
 +&reg_usdhc2_vmmc {
-+	u-boot,off-on-delay-us = <20000>;
 +	u-boot,dm-spl;
 +};
 +
@@ -158,6 +126,22 @@ index 0000000000..78323967f6
 +};
 +
 +&uart2 {
++	u-boot,dm-spl;
++};
++
++&crypto {
++	u-boot,dm-spl;
++};
++
++&sec_jr0 {
++	u-boot,dm-spl;
++};
++
++&sec_jr1 {
++	u-boot,dm-spl;
++};
++
++&sec_jr2 {
 +	u-boot,dm-spl;
 +};
 +
@@ -736,10 +720,10 @@ index a225a9784f..59237032b7 100644
  endif
 diff --git a/board/groupgets/kimchi/Kconfig b/board/groupgets/kimchi/Kconfig
 new file mode 100644
-index 0000000000..a60d0df905
+index 0000000000..863d228cdb
 --- /dev/null
 +++ b/board/groupgets/kimchi/Kconfig
-@@ -0,0 +1,14 @@
+@@ -0,0 +1,17 @@
 +if TARGET_KIMCHI
 +
 +config SYS_BOARD
@@ -750,6 +734,9 @@ index 0000000000..a60d0df905
 +
 +config SYS_CONFIG_NAME
 +	default "kimchi"
++
++config IMX_CONFIG
++	default board/groupgets/kimchi/imximage.cfg"
 +
 +source "board/freescale/common/Kconfig"
 +
@@ -817,6 +804,20 @@ index 0000000000..2d94f2b846
 +        fi
 +
 +done
+diff --git a/board/groupgets/kimchi/imximage.cfg b/board/groupgets/kimchi/imximage.cfg
+new file mode 100644
+index 0000000000..20061521f2
+--- /dev/null
++++ b/board/groupgets/kimchi/imximage.cfg
+@@ -0,0 +1,8 @@
++/* SPDX-License-Identifier: GPL-2.0+ */
++/*
++ * Copyright 2021 NXP
++ */
++
++
++BOOT_FROM	sd
++LOADER		u-boot-spl-ddr.bin	0x7E1000
 diff --git a/board/groupgets/kimchi/kimchi.c b/board/groupgets/kimchi/kimchi.c
 new file mode 100644
 index 0000000000..5dc8333148
@@ -3002,10 +3003,10 @@ index 0000000000..5068fa7a32
 +};
 diff --git a/board/groupgets/kimchi/spl.c b/board/groupgets/kimchi/spl.c
 new file mode 100644
-index 0000000000..da0a49eca2
+index 0000000000..9523ca9b6b
 --- /dev/null
 +++ b/board/groupgets/kimchi/spl.c
-@@ -0,0 +1,250 @@
+@@ -0,0 +1,270 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Copyright 2018-2019 NXP
@@ -3037,6 +3038,26 @@ index 0000000000..da0a49eca2
 +#include <linux/delay.h>
 +
 +DECLARE_GLOBAL_DATA_PTR;
++
++int spl_board_boot_device(enum boot_device boot_dev_spl)
++{
++#ifdef CONFIG_SPL_BOOTROM_SUPPORT
++	return BOOT_DEVICE_BOOTROM;
++#else
++	switch (boot_dev_spl) {
++	case SD1_BOOT:
++	case MMC1_BOOT:
++		return BOOT_DEVICE_MMC1;
++	case SD2_BOOT:
++	case MMC2_BOOT:
++		return BOOT_DEVICE_MMC2;
++	case USB_BOOT:
++		return BOOT_DEVICE_BOARD;
++	default:
++		return BOOT_DEVICE_NONE;
++	}
++#endif
++}
 +
 +void spl_dram_init(void)
 +{
@@ -3159,7 +3180,7 @@ index 0000000000..da0a49eca2
 +	return 1;
 +}
 +
-+#ifdef CONFIG_POWER
++#if CONFIG_IS_ENABLED(POWER_LEGACY)
 +#define I2C_PMIC	0
 +int power_init_board(void)
 +{
@@ -3198,11 +3219,11 @@ index 0000000000..da0a49eca2
 +
 +void spl_board_init(void)
 +{
-+#ifdef CONFIG_FSL_CAAM
-+	if (sec_init()) {
-+		printf("\nsec_init failed!\n");
++	if (IS_ENABLED(CONFIG_FSL_CAAM)) {
++		if (sec_init())
++			printf("\nsec_init failed!\n");
 +	}
-+#endif
++
 +#ifndef CONFIG_SPL_USB_SDP_SUPPORT
 +	/* Serial download mode */
 +	if (is_usb_boot()) {
@@ -3238,9 +3259,9 @@ index 0000000000..da0a49eca2
 +
 +	preloader_console_init();
 +
-+	ret = spl_init();
++	ret = spl_early_init();
 +	if (ret) {
-+		debug("spl_init() failed: %d\n", ret);
++		debug("spl_early_init() failed: %d\n", ret);
 +		hang();
 +	}
 +
@@ -3274,7 +3295,7 @@ index 0000000000..b990365a11
 \ No newline at end of file
 diff --git a/configs/kimchi_defconfig b/configs/kimchi_defconfig
 new file mode 100644
-index 0000000000..ebd9b74233
+index 0000000000..7ce03cbe17
 --- /dev/null
 +++ b/configs/kimchi_defconfig
 @@ -0,0 +1,163 @@
@@ -3305,13 +3326,12 @@ index 0000000000..ebd9b74233
 +CONFIG_CSF_SIZE=0x2000
 +CONFIG_DISTRO_DEFAULTS=y
 +CONFIG_BOOTCOMMAND="run distro_bootcmd;run bsp_bootcmd"
-+CONFIG_SYS_LOAD_ADDR=0x40480000
++CONFIG_SYS_LOAD_ADDR=0x40400000
 +CONFIG_FIT=y
 +CONFIG_FIT_EXTERNAL_OFFSET=0x3000
 +CONFIG_SPL_LOAD_FIT=y
-+CONFIG_SPL_FIT_GENERATOR="arch/arm/mach-imx/mkimage_fit_atf.sh"
++# CONFIG_SPL_FIT_GENERATOR is not set
 +CONFIG_OF_SYSTEM_SETUP=y
-+CONFIG_SYS_EXTRA_OPTIONS="IMX_CONFIG=arch/arm/mach-imx/imx8m/imximage-8mm-lpddr4.cfg"
 +CONFIG_BOARD_LATE_INIT=y
 +CONFIG_BOARD_EARLY_INIT_F=y
 +CONFIG_SPL_BOARD_INIT=y
@@ -3364,7 +3384,7 @@ index 0000000000..ebd9b74233
 +CONFIG_ENV_IS_IN_MMC=y
 +CONFIG_SYS_RELOC_GD_ENV_ADDR=y
 +CONFIG_SYS_MMC_ENV_DEV=0
-+CONFIG_SYS_MMC_IMG_LOAD_PART=1
++CONFIG_SYS_MMC_ENV_PART=1
 +CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG=y
 +CONFIG_NET_RANDOM_ETHADDR=y
 +CONFIG_CLK_COMPOSITE_CCF=y
@@ -3400,6 +3420,7 @@ index 0000000000..ebd9b74233
 +CONFIG_LED_GPIO=y
 +
 +CONFIG_PINCTRL=y
++CONFIG_SPL_PINCTRL=y
 +CONFIG_PINCTRL_IMX8M=y
 +CONFIG_SPL_POWER_LEGACY=y
 +CONFIG_DM_REGULATOR=y
@@ -3420,8 +3441,8 @@ index 0000000000..ebd9b74233
 +CONFIG_USB_EHCI_HCD=y
 +
 +CONFIG_USB_GADGET_MANUFACTURER="FSL"
-+CONFIG_USB_GADGET_VENDOR_NUM=0x0525
-+CONFIG_USB_GADGET_PRODUCT_NUM=0xa4a5
++CONFIG_USB_GADGET_VENDOR_NUM=0x1fc9
++CONFIG_USB_GADGET_PRODUCT_NUM=0x0152
 +
 +CONFIG_SPL_USB_HOST=y
 +CONFIG_SPL_USB_GADGET=y
@@ -3443,10 +3464,10 @@ index 0000000000..ebd9b74233
 +CONFIG_EFI_SECURE_BOOT=y
 diff --git a/include/configs/kimchi.h b/include/configs/kimchi.h
 new file mode 100644
-index 0000000000..898aceeb3a
+index 0000000000..a0b2943a9e
 --- /dev/null
 +++ b/include/configs/kimchi.h
-@@ -0,0 +1,215 @@
+@@ -0,0 +1,212 @@
 +/*
 + * Copyright 2020 GroupGets
 + * Copyright 2018 NXP
@@ -3477,7 +3498,7 @@ index 0000000000..898aceeb3a
 +#define CONFIG_SYS_SPL_MALLOC_SIZE	SZ_512K	/* 512 KB */
 +
 +/* malloc f used before GD_FLG_FULL_MALLOC_INIT set */
-+#define CONFIG_MALLOC_F_ADDR		0x912000
++#define CONFIG_MALLOC_F_ADDR		0x930000
 +/* For RAW image gives a error info not panic */
 +#define CONFIG_SPL_ABORT_ON_RAW_IMAGE
 +
@@ -3543,6 +3564,7 @@ index 0000000000..898aceeb3a
 +	CONFIG_MFG_ENV_SETTINGS \
 +	BOOTENV \
 +	JAILHOUSE_ENV \
++	"prepare_mcore=setenv mcore_clk clk-imx8mm.mcore_booted;\0" \
 +	"scriptaddr=0x43500000\0" \
 +	"kernel_addr_r=" __stringify(CONFIG_SYS_LOAD_ADDR) "\0" \
 +	"bsp_script=boot.scr\0" \
@@ -3557,7 +3579,7 @@ index 0000000000..898aceeb3a
 +	"initrd_addr=0x43800000\0"		\
 +	"initrd_high=0xffffffffffffffff\0" \
 +	"mmcdev="__stringify(CONFIG_SYS_MMC_ENV_DEV)"\0" \
-+	"mmcpart=" __stringify(CONFIG_SYS_MMC_IMG_LOAD_PART) "\0" \
++	"mmcpart=" __stringify(CONFIG_SYS_MMC_ENV_PART) "\0" \
 +	"mmcroot=" CONFIG_MMCROOT " rootwait rw\0" \
 +	"mmcautodetect=yes\0" \
 +	"mmcargs=setenv bootargs ${jh_clk} console=${console} root=${mmcroot}\0 " \
@@ -3618,11 +3640,7 @@ index 0000000000..898aceeb3a
 +#define CONFIG_SYS_INIT_SP_ADDR \
 +        (CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_SP_OFFSET)
 +
-+#define CONFIG_SYS_MMC_ENV_DEV		0   /* USDHC1 */
 +#define CONFIG_MMCROOT			"/dev/mmcblk0p2"  /* USDHC1 */
-+
-+/* Size of malloc() pool */
-+#define CONFIG_SYS_MALLOC_LEN		SZ_32M
 +
 +#define CONFIG_SYS_SDRAM_BASE           0x40000000
 +#define PHYS_SDRAM                      0x40000000
@@ -3662,6 +3680,3 @@ index 0000000000..898aceeb3a
 +#endif
 +
 +#endif
--- 
-2.37.1 (Apple Git-137.1)
-
