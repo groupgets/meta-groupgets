@@ -1,17 +1,17 @@
-From 83758c514a2953c360555a11841ff33ba3a4bbdd Mon Sep 17 00:00:00 2001
+From cf8b83ff27228a42343767d724f9556ce23fc7bb Mon Sep 17 00:00:00 2001
 From: Kurt Kiefer <kekiefer@gmail.com>
 Date: Sun, 30 Aug 2020 21:11:52 -0700
-Subject: [PATCH 3/3] set battery chemistry at boot
+Subject: [PATCH] set battery chemistry at boot
 
 ---
  board/groupgets/kimchi/Makefile      |   1 +
  board/groupgets/kimchi/bq27426_ops.c | 192 +++++++++++++++++++++++++++
- board/groupgets/kimchi/kimchi.c      |  37 ++----
- 3 files changed, 204 insertions(+), 26 deletions(-)
+ board/groupgets/kimchi/kimchi.c      |  36 ++---
+ 3 files changed, 203 insertions(+), 26 deletions(-)
  create mode 100644 board/groupgets/kimchi/bq27426_ops.c
 
 diff --git a/board/groupgets/kimchi/Makefile b/board/groupgets/kimchi/Makefile
-index 6831d5608b..b04f260e8e 100644
+index 6831d5608ba..b04f260e8e1 100644
 --- a/board/groupgets/kimchi/Makefile
 +++ b/board/groupgets/kimchi/Makefile
 @@ -13,4 +13,5 @@ endif
@@ -22,7 +22,7 @@ index 6831d5608b..b04f260e8e 100644
  endif
 diff --git a/board/groupgets/kimchi/bq27426_ops.c b/board/groupgets/kimchi/bq27426_ops.c
 new file mode 100644
-index 0000000000..bf5b0a3af4
+index 00000000000..bf5b0a3af46
 --- /dev/null
 +++ b/board/groupgets/kimchi/bq27426_ops.c
 @@ -0,0 +1,192 @@
@@ -219,10 +219,10 @@ index 0000000000..bf5b0a3af4
 +	}
 +}
 diff --git a/board/groupgets/kimchi/kimchi.c b/board/groupgets/kimchi/kimchi.c
-index 5dc8333148..ae4ff160f1 100644
+index b6d264fd2aa..afe94d2bc4c 100644
 --- a/board/groupgets/kimchi/kimchi.c
 +++ b/board/groupgets/kimchi/kimchi.c
-@@ -24,6 +24,8 @@
+@@ -26,6 +26,8 @@
  
  DECLARE_GLOBAL_DATA_PTR;
  
@@ -231,7 +231,7 @@ index 5dc8333148..ae4ff160f1 100644
  #define UART_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_FSEL1 | PAD_CTL_PUE | PAD_CTL_PE)
  #define WDOG_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_ODE | PAD_CTL_PUE | PAD_CTL_PE)
  
-@@ -54,7 +56,7 @@ int board_early_init_f(void)
+@@ -73,7 +75,7 @@ int board_early_init_f(void)
  #ifdef CONFIG_USB_TCPC
  struct tcpc_port port1;
  
@@ -240,7 +240,7 @@ index 5dc8333148..ae4ff160f1 100644
  {
  	struct udevice *bus;
  	struct udevice *i2c_dev = NULL;
-@@ -83,7 +85,6 @@ static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
+@@ -102,7 +104,6 @@ static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
  
  	if ((status & 0x7) == 0) {
  		printf("%s starting in dead/no battery condition\n", __func__);
@@ -248,7 +248,7 @@ index 5dc8333148..ae4ff160f1 100644
  
  #ifdef CONFIG_KIMCHI_FORCE_ENABLE_BATTERY
  		printf("%s exiting dead battery mode\n", __func__);
-@@ -100,11 +101,7 @@ static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
+@@ -119,11 +120,7 @@ static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
  			printf("%s dm_i2c_write failed, err %d\n", __func__, ret);
  			return -EIO;
  		}
@@ -260,7 +260,7 @@ index 5dc8333148..ae4ff160f1 100644
  	}
  
  	/* Set OVP threshold to 6V */
-@@ -120,28 +117,9 @@ static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
+@@ -139,28 +136,9 @@ static int setup_pd_switch(uint8_t i2c_bus, uint8_t addr, bool have_battery)
  
  int pd_switch_snk_enable(struct tcpc_port *port)
  {
@@ -290,24 +290,16 @@ index 5dc8333148..ae4ff160f1 100644
  	} else
  		return -EINVAL;
  }
-@@ -235,10 +213,17 @@ int board_ehci_usb_phy_mode(struct udevice *dev)
+@@ -254,6 +232,12 @@ int board_ehci_usb_phy_mode(struct udevice *dev)
  
  int board_init(void)
  {
 +	int ret;
 +
- #ifdef CONFIG_LED
- 	led_default_state();
- #endif
- 
 +	ret = setup_bq27426(0, 0x55);
 +	if (ret) {
 +		printf("setup_bq27426 returns %d\n", ret);
 +	}
-+
+ 
  #ifdef CONFIG_USB_TCPC
  	setup_typec();
- #endif
--- 
-2.37.1 (Apple Git-137.1)
-

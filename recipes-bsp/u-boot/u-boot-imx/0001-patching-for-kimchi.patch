@@ -1,25 +1,26 @@
-From 4c572f32e40169d40ce92a8aad97a4072097afa6 Mon Sep 17 00:00:00 2001
+From 44be7103798f1f71fe60da67bbc90fe3c76e88a3 Mon Sep 17 00:00:00 2001
 From: Kurt Kiefer <kekiefer@gmail.com>
 Date: Wed, 29 Jul 2020 21:52:42 -0700
 Subject: [PATCH] patching for kimchi
 
 ---
  arch/arm/dts/Makefile                  |    1 +
+ arch/arm/dts/imx8mm-evk.dtsi           |    2 +-
  arch/arm/dts/imx8mm-kimchi-u-boot.dtsi |  139 ++
- arch/arm/dts/imx8mm-kimchi.dts         |  497 +++++++
- arch/arm/mach-imx/imx8m/Kconfig        |    7 +
- board/groupgets/kimchi/Kconfig         |   17 +
+ arch/arm/dts/imx8mm-kimchi.dts         |  544 +++++++
+ arch/arm/mach-imx/imx8m/Kconfig        |   11 +
+ board/groupgets/kimchi/Kconfig         |   15 +
  board/groupgets/kimchi/Makefile        |   16 +
  board/groupgets/kimchi/boot.cmd        |   35 +
  board/groupgets/kimchi/imximage.cfg    |    8 +
- board/groupgets/kimchi/kimchi.c        |  316 ++++
+ board/groupgets/kimchi/kimchi.c        |  332 +++++
  board/groupgets/kimchi/lpddr4_timing.c | 1855 ++++++++++++++++++++++++
- board/groupgets/kimchi/spl.c           |  270 ++++
+ board/groupgets/kimchi/spl.c           |  272 ++++
  board/groupgets/kimchi/tcpc.c          |    1 +
  board/groupgets/kimchi/tcpc.h          |    1 +
- configs/kimchi_defconfig               |  163 +++
- include/configs/kimchi.h               |  212 +++
- 15 files changed, 3538 insertions(+)
+ configs/kimchi_defconfig               |  203 +++
+ include/configs/kimchi.h               |  160 ++
+ 16 files changed, 3594 insertions(+), 1 deletion(-)
  create mode 100644 arch/arm/dts/imx8mm-kimchi-u-boot.dtsi
  create mode 100644 arch/arm/dts/imx8mm-kimchi.dts
  create mode 100644 board/groupgets/kimchi/Kconfig
@@ -35,20 +36,33 @@ Subject: [PATCH] patching for kimchi
  create mode 100644 include/configs/kimchi.h
 
 diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
-index 709fdaecd7..785abbe71a 100644
+index e494d16ffce..24e6e489e73 100644
 --- a/arch/arm/dts/Makefile
 +++ b/arch/arm/dts/Makefile
-@@ -982,6 +982,7 @@ dtb-$(CONFIG_ARCH_IMX8M) += \
- 	imx8mm-venice-gw7902.dtb \
- 	imx8mm-verdin.dtb \
- 	phycore-imx8mm.dtb \
+@@ -1124,6 +1124,7 @@ dtb-$(CONFIG_ARCH_IMX8M) += \
+ 	imx8mm-ab2.dtb \
+ 	imx8mm-icore-mx8mm-ctouch2.dtb \
+ 	imx8mm-icore-mx8mm-edimm2.2.dtb \
 +	imx8mm-kimchi.dtb \
- 	imx8mn-ddr3l-evk.dtb \
- 	imx8mn-ddr4-evk.dtb \
- 	imx8mn-ddr4-ab2.dtb \
+ 	imx8mm-kontron-bl.dtb \
+ 	imx8mm-kontron-bl-osm-s.dtb \
+ 	imx8mm-mx8menlo.dtb \
+diff --git a/arch/arm/dts/imx8mm-evk.dtsi b/arch/arm/dts/imx8mm-evk.dtsi
+index 200274972f7..4ed734f5c10 100644
+--- a/arch/arm/dts/imx8mm-evk.dtsi
++++ b/arch/arm/dts/imx8mm-evk.dtsi
+@@ -43,7 +43,7 @@
+ 		regulator-name = "MPCIE_3V3";
+ 		regulator-min-microvolt = <3300000>;
+ 		regulator-max-microvolt = <3300000>;
+-		gpio = <&gpio1 5 GPIO_ACTIVE_HIGH>;
++		gpio = <&gpio4 10 GPIO_ACTIVE_HIGH>;
+ 		enable-active-high;
+ 	};
+ 
 diff --git a/arch/arm/dts/imx8mm-kimchi-u-boot.dtsi b/arch/arm/dts/imx8mm-kimchi-u-boot.dtsi
 new file mode 100644
-index 0000000000..5285521b63
+index 00000000000..cd2a51e85c2
 --- /dev/null
 +++ b/arch/arm/dts/imx8mm-kimchi-u-boot.dtsi
 @@ -0,0 +1,139 @@
@@ -63,7 +77,7 @@ index 0000000000..5285521b63
 +	wdt-reboot {
 +		compatible = "wdt-reboot";
 +		wdt = <&wdog1>;
-+		u-boot,dm-spl;
++		bootph-pre-ram;
 +	};
 +
 +	aliases {
@@ -86,67 +100,63 @@ index 0000000000..5285521b63
 +};
 +
 +&reg_usdhc2_vmmc {
-+	u-boot,dm-spl;
++	bootph-pre-ram;
 +};
 +
 +&pinctrl_uart2 {
-+	u-boot,dm-spl;
++	bootph-pre-ram;
 +};
 +
 +&pinctrl_usdhc2_gpio {
-+	u-boot,dm-spl;
++	bootph-pre-ram;
 +};
 +
 +&pinctrl_usdhc1 {
-+	u-boot,dm-spl;
++	bootph-pre-ram;
 +};
 +
 +&pinctrl_usdhc2 {
-+	u-boot,dm-spl;
++	bootph-pre-ram;
 +};
 +
 +&gpio1 {
-+	u-boot,dm-spl;
++	bootph-pre-ram;
 +};
 +
 +&gpio2 {
-+	u-boot,dm-spl;
++	bootph-pre-ram;
 +};
 +
 +&gpio3 {
-+	u-boot,dm-spl;
++	bootph-pre-ram;
 +};
 +
 +&gpio4 {
-+	u-boot,dm-spl;
++	bootph-pre-ram;
 +};
 +
 +&gpio5 {
-+	u-boot,dm-spl;
++	bootph-pre-ram;
 +};
 +
 +&uart2 {
-+	u-boot,dm-spl;
++	bootph-pre-ram;
 +};
 +
-+&crypto {
-+	u-boot,dm-spl;
++&usbmisc1 {
++	bootph-pre-ram;
 +};
 +
-+&sec_jr0 {
-+	u-boot,dm-spl;
++&usbphynop1 {
++	bootph-pre-ram;
 +};
 +
-+&sec_jr1 {
-+	u-boot,dm-spl;
-+};
-+
-+&sec_jr2 {
-+	u-boot,dm-spl;
++&usbotg1 {
++	bootph-pre-ram;
 +};
 +
 +&usdhc1 {
-+	u-boot,dm-spl;
++	bootph-pre-ram;
 +	mmc-hs400-1_8v;
 +	mmc-hs400-enhanced-strobe;
 +	assigned-clocks = <&clk IMX8MM_CLK_USDHC1>;
@@ -155,7 +165,7 @@ index 0000000000..5285521b63
 +};
 +
 +&usdhc2 {
-+	u-boot,dm-spl;
++	bootph-pre-ram;
 +	sd-uhs-sdr104;
 +	sd-uhs-ddr50;
 +	assigned-clocks = <&clk IMX8MM_CLK_USDHC2>;
@@ -164,27 +174,31 @@ index 0000000000..5285521b63
 +};
 +
 +&i2c1 {
-+	u-boot,dm-spl;
++	bootph-pre-ram;
 +};
 +
 +&{/soc@0/bus@30800000/i2c@30a20000/pmic@4b} {
-+	u-boot,dm-spl;
++	bootph-pre-ram;
 +};
 +
 +&{/soc@0/bus@30800000/i2c@30a20000/pmic@4b/regulators} {
-+	u-boot,dm-spl;
++	bootph-pre-ram;
 +};
 +
 +&pinctrl_i2c1 {
-+	u-boot,dm-spl;
++	bootph-pre-ram;
 +};
 +
 +&pinctrl_pmic {
-+	u-boot,dm-spl;
++	bootph-pre-ram;
++};
++
++&pinctrl_wdog {
++	bootph-pre-ram;
 +};
 +
 +&wdog1 {
-+	u-boot,dm-spl;
++	bootph-pre-ram;
 +};
 +
 +&usbotg1 {
@@ -193,10 +207,10 @@ index 0000000000..5285521b63
 +};
 diff --git a/arch/arm/dts/imx8mm-kimchi.dts b/arch/arm/dts/imx8mm-kimchi.dts
 new file mode 100644
-index 0000000000..92f905f86e
+index 00000000000..32cd6650871
 --- /dev/null
 +++ b/arch/arm/dts/imx8mm-kimchi.dts
-@@ -0,0 +1,497 @@
+@@ -0,0 +1,544 @@
 +/*
 + * Copyright 2018 NXP
 + *
@@ -213,6 +227,7 @@ index 0000000000..92f905f86e
 +
 +/dts-v1/;
 +
++#include <dt-bindings/phy/phy-imx8-pcie.h>
 +#include <dt-bindings/usb/pd.h>
 +#include "imx8mm.dtsi"
 +
@@ -252,6 +267,17 @@ index 0000000000..92f905f86e
 +			gpios = <&gpio5 3 GPIO_ACTIVE_LOW>;
 +			default-state = "on";
 +		};
++	};
++
++	reg_pcie0: regulator-pcie {
++		compatible = "regulator-fixed";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_pcie0_reg>;
++		regulator-name = "MPCIE_3V3";
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++		gpio = <&gpio1 5 GPIO_ACTIVE_HIGH>;
++		enable-active-high;
 +	};
 +
 +	reg_usdhc2_vmmc: regulator-usdhc2 {
@@ -464,6 +490,28 @@ index 0000000000..92f905f86e
 +	};
 +};
 +
++&pcie_phy {
++	clocks = <&clk IMX8MM_CLK_PCIE1_PHY>;
++	fsl,clkreq-unsupported;
++	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_OUTPUT>;
++	fsl,tx-deemph-gen1 = <0x2d>;
++	fsl,tx-deemph-gen2 = <0xf>;
++	status = "okay";
++};
++
++&pcie0 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_pcie0>;
++	reset-gpio = <&gpio3 25 GPIO_ACTIVE_LOW>;
++	assigned-clocks = <&clk IMX8MM_CLK_PCIE1_AUX>,
++			  <&clk IMX8MM_CLK_PCIE1_CTRL>;
++	assigned-clock-rates = <10000000>, <250000000>;
++	assigned-clock-parents = <&clk IMX8MM_SYS_PLL2_50M>,
++				 <&clk IMX8MM_SYS_PLL2_250M>;
++	vpcie-supply = <&reg_pcie0>;
++	status = "okay";
++};
++
 +&snvs_pwrkey {
 +	status = "okay";
 +};
@@ -572,6 +620,19 @@ index 0000000000..92f905f86e
 +		fsl,pins = <
 +			MX8MM_IOMUXC_I2C3_SCL_GPIO5_IO18        		0x1c3
 +			MX8MM_IOMUXC_I2C3_SDA_GPIO5_IO19        	0x1c3
++		>;
++	};
++
++	pinctrl_pcie0: pcie0grp {
++		fsl,pins = <
++			MX8MM_IOMUXC_SAI5_RXD0_GPIO3_IO21	0x41
++			MX8MM_IOMUXC_SAI5_MCLK_GPIO3_IO25		0x41
++		>;
++	};
++
++	pinctrl_pcie0_reg: pcie0reggrp {
++		fsl,pins = <
++			MX8MM_IOMUXC_SAI1_TXFS_GPIO4_IO10	0x40
 +		>;
 +	};
 +
@@ -695,35 +756,40 @@ index 0000000000..92f905f86e
 +	};
 +};
 diff --git a/arch/arm/mach-imx/imx8m/Kconfig b/arch/arm/mach-imx/imx8m/Kconfig
-index a225a9784f..59237032b7 100644
+index 473cfa8e5e3..4443f2727ce 100644
 --- a/arch/arm/mach-imx/imx8m/Kconfig
 +++ b/arch/arm/mach-imx/imx8m/Kconfig
-@@ -341,6 +341,12 @@ config TARGET_IMX8MP_RSB3720A1_6G
- 	select IMX8MP
- 	select SUPPORT_SPL
+@@ -422,6 +422,16 @@ config TARGET_IMX8MM_CL_IOT_GATE_OPTEE
  	select IMX8M_LPDDR4
-+
+ 	select SUPPORT_EXTENSION_SCAN
+ 
 +config TARGET_KIMCHI
 +	bool "GroupGets imx8mm kimchi micro"
 +	select IMX8MM
 +	select SUPPORT_SPL
 +	select IMX8M_LPDDR4
- endchoice
- 
- source "board/advantech/imx8mp_rsb3720a1/Kconfig"
-@@ -366,5 +372,6 @@ source "board/technexion/pico-imx8mq/Kconfig"
- source "board/variscite/imx8mn_var_som/Kconfig"
- source "board/toradex/verdin-imx8mm/Kconfig"
- source "board/toradex/verdin-imx8mp/Kconfig"
++	select FSL_CAAM
++	select FSL_BLOB
++	select ARCH_MISC_INIT
++	select SPL_CRYPTO if SPL
++
+ config TARGET_IMX8MP_RSB3720A1_4G
+ 	bool "Support i.MX8MP RSB3720A1 4G"
+ 	select IMX8MP
+@@ -467,6 +477,7 @@ source "board/freescale/imx8mn_evk/Kconfig"
+ source "board/freescale/imx8mp_evk/Kconfig"
+ source "board/gateworks/venice/Kconfig"
+ source "board/google/imx8mq_phanbell/Kconfig"
 +source "board/groupgets/kimchi/Kconfig"
- 
- endif
+ source "board/kontron/pitx_imx8m/Kconfig"
+ source "board/kontron/sl-mx8mm/Kconfig"
+ source "board/menlo/mx8menlo/Kconfig"
 diff --git a/board/groupgets/kimchi/Kconfig b/board/groupgets/kimchi/Kconfig
 new file mode 100644
-index 0000000000..863d228cdb
+index 00000000000..eb5946579fa
 --- /dev/null
 +++ b/board/groupgets/kimchi/Kconfig
-@@ -0,0 +1,17 @@
+@@ -0,0 +1,15 @@
 +if TARGET_KIMCHI
 +
 +config SYS_BOARD
@@ -736,14 +802,12 @@ index 0000000000..863d228cdb
 +	default "kimchi"
 +
 +config IMX_CONFIG
-+	default board/groupgets/kimchi/imximage.cfg"
-+
-+source "board/freescale/common/Kconfig"
++	default "board/groupgets/kimchi/imximage.cfg"
 +
 +endif
 diff --git a/board/groupgets/kimchi/Makefile b/board/groupgets/kimchi/Makefile
 new file mode 100644
-index 0000000000..6831d5608b
+index 00000000000..6831d5608ba
 --- /dev/null
 +++ b/board/groupgets/kimchi/Makefile
 @@ -0,0 +1,16 @@
@@ -765,7 +829,7 @@ index 0000000000..6831d5608b
 +endif
 diff --git a/board/groupgets/kimchi/boot.cmd b/board/groupgets/kimchi/boot.cmd
 new file mode 100644
-index 0000000000..2d94f2b846
+index 00000000000..2d94f2b846e
 --- /dev/null
 +++ b/board/groupgets/kimchi/boot.cmd
 @@ -0,0 +1,35 @@
@@ -806,7 +870,7 @@ index 0000000000..2d94f2b846
 +done
 diff --git a/board/groupgets/kimchi/imximage.cfg b/board/groupgets/kimchi/imximage.cfg
 new file mode 100644
-index 0000000000..20061521f2
+index 00000000000..20061521f22
 --- /dev/null
 +++ b/board/groupgets/kimchi/imximage.cfg
 @@ -0,0 +1,8 @@
@@ -820,10 +884,10 @@ index 0000000000..20061521f2
 +LOADER		u-boot-spl-ddr.bin	0x7E1000
 diff --git a/board/groupgets/kimchi/kimchi.c b/board/groupgets/kimchi/kimchi.c
 new file mode 100644
-index 0000000000..5dc8333148
+index 00000000000..b6d264fd2aa
 --- /dev/null
 +++ b/board/groupgets/kimchi/kimchi.c
-@@ -0,0 +1,316 @@
+@@ -0,0 +1,332 @@
 +/*
 + * Copyright 2020 GroupGets
 + * Copyright 2018 NXP
@@ -832,8 +896,12 @@ index 0000000000..5dc8333148
 + */
 +
 +#include <common.h>
++#include <efi_loader.h>
++#include <env.h>
++#include <init.h>
 +#include <miiphy.h>
 +#include <netdev.h>
++#include <asm/global_data.h>
 +#include <asm/mach-imx/iomux-v3.h>
 +#include <asm-generic/gpio.h>
 +#include <asm/arch/imx8mm_pins.h>
@@ -845,8 +913,6 @@ index 0000000000..5dc8333148
 +#include <asm/io.h>
 +#include "tcpc.h"
 +#include <usb.h>
-+#include <imx_sip.h>
-+#include <linux/arm-smccc.h>
 +
 +DECLARE_GLOBAL_DATA_PTR;
 +
@@ -861,6 +927,23 @@ index 0000000000..5dc8333148
 +static iomux_v3_cfg_t const wdog_pads[] = {
 +	IMX8MM_PAD_GPIO1_IO02_WDOG1_WDOG_B  | MUX_PAD_CTRL(WDOG_PAD_CTRL),
 +};
++
++#if CONFIG_IS_ENABLED(EFI_HAVE_CAPSULE_SUPPORT)
++struct efi_fw_image fw_images[] = {
++	{
++		.image_type_id = IMX_BOOT_IMAGE_GUID,
++		.fw_name = u"IMX8MM-EVK-RAW",
++		.image_index = 1,
++	},
++};
++
++struct efi_capsule_update_info update_info = {
++	.dfu_string = "mmc 2=flash-bin raw 0x42 0x2000 mmcpart 1",
++	.num_images = ARRAY_SIZE(fw_images),
++	.images = fw_images,
++};
++
++#endif /* EFI_HAVE_CAPSULE_SUPPORT */
 +
 +int board_early_init_f(void)
 +{
@@ -1061,9 +1144,6 @@ index 0000000000..5dc8333148
 +
 +int board_init(void)
 +{
-+#ifdef CONFIG_LED
-+	led_default_state();
-+#endif
 +
 +#ifdef CONFIG_USB_TCPC
 +	setup_typec();
@@ -1142,7 +1222,7 @@ index 0000000000..5dc8333148
 +#endif /*CONFIG_FSL_FASTBOOT*/
 diff --git a/board/groupgets/kimchi/lpddr4_timing.c b/board/groupgets/kimchi/lpddr4_timing.c
 new file mode 100644
-index 0000000000..5068fa7a32
+index 00000000000..5068fa7a322
 --- /dev/null
 +++ b/board/groupgets/kimchi/lpddr4_timing.c
 @@ -0,0 +1,1855 @@
@@ -3003,10 +3083,10 @@ index 0000000000..5068fa7a32
 +};
 diff --git a/board/groupgets/kimchi/spl.c b/board/groupgets/kimchi/spl.c
 new file mode 100644
-index 0000000000..9523ca9b6b
+index 00000000000..bc6757e04c7
 --- /dev/null
 +++ b/board/groupgets/kimchi/spl.c
-@@ -0,0 +1,270 @@
+@@ -0,0 +1,272 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Copyright 2018-2019 NXP
@@ -3028,6 +3108,7 @@ index 0000000000..9523ca9b6b
 +#include <asm/arch/sys_proto.h>
 +#include <asm/mach-imx/boot_mode.h>
 +#include <asm/arch/ddr.h>
++#include <asm/sections.h>
 +
 +#include <power/pmic.h>
 +#include <power/bd71837.h>
@@ -3036,6 +3117,7 @@ index 0000000000..9523ca9b6b
 +#include <fsl_esdhc_imx.h>
 +#include <mmc.h>
 +#include <linux/delay.h>
++#include <fsl_sec.h>
 +
 +DECLARE_GLOBAL_DATA_PTR;
 +
@@ -3129,7 +3211,7 @@ index 0000000000..9523ca9b6b
 +	 * mmc0                    USDHC0
 +	 * mmc1                    USDHC1
 +	 */
-+	for (i = 0; i < CONFIG_SYS_FSL_USDHC_NUM; i++) {
++	for (i = 0; i < CFG_SYS_FSL_USDHC_NUM; i++) {
 +		switch (i) {
 +		case 0:
 +			init_clk_usdhc(0);
@@ -3259,16 +3341,16 @@ index 0000000000..9523ca9b6b
 +
 +	preloader_console_init();
 +
-+	ret = spl_early_init();
++	ret = spl_init();
 +	if (ret) {
-+		debug("spl_early_init() failed: %d\n", ret);
++		debug("spl_init() failed: %d\n", ret);
 +		hang();
 +	}
 +
 +	enable_tzc380();
 +
 +	/* Adjust pmic voltage to 1.0V for 800M */
-+	setup_i2c(0, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
++	setup_i2c(0, CFG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
 +
 +	power_init_board();
 +
@@ -3279,7 +3361,7 @@ index 0000000000..9523ca9b6b
 +}
 diff --git a/board/groupgets/kimchi/tcpc.c b/board/groupgets/kimchi/tcpc.c
 new file mode 120000
-index 0000000000..6600f01e80
+index 00000000000..6600f01e802
 --- /dev/null
 +++ b/board/groupgets/kimchi/tcpc.c
 @@ -0,0 +1 @@
@@ -3287,7 +3369,7 @@ index 0000000000..6600f01e80
 \ No newline at end of file
 diff --git a/board/groupgets/kimchi/tcpc.h b/board/groupgets/kimchi/tcpc.h
 new file mode 120000
-index 0000000000..b990365a11
+index 00000000000..b990365a11c
 --- /dev/null
 +++ b/board/groupgets/kimchi/tcpc.h
 @@ -0,0 +1 @@
@@ -3295,15 +3377,14 @@ index 0000000000..b990365a11
 \ No newline at end of file
 diff --git a/configs/kimchi_defconfig b/configs/kimchi_defconfig
 new file mode 100644
-index 0000000000..7ce03cbe17
+index 00000000000..36bb976c1e5
 --- /dev/null
 +++ b/configs/kimchi_defconfig
-@@ -0,0 +1,163 @@
+@@ -0,0 +1,203 @@
 +CONFIG_ARM=y
 +CONFIG_ARCH_IMX8M=y
-+CONFIG_SYS_TEXT_BASE=0x40200000
++CONFIG_TEXT_BASE=0x40200000
 +CONFIG_SYS_MALLOC_LEN=0x2000000
-+CONFIG_SYS_MALLOC_F_LEN=0x10000
 +CONFIG_SPL_GPIO=y
 +CONFIG_SPL_LIBCOMMON_SUPPORT=y
 +CONFIG_SPL_LIBGENERIC_SUPPORT=y
@@ -3317,10 +3398,11 @@ index 0000000000..7ce03cbe17
 +CONFIG_DM_GPIO=y
 +CONFIG_SPL_TEXT_BASE=0x7E1000
 +CONFIG_TARGET_KIMCHI=y
-+CONFIG_ARCH_MISC_INIT=y
++CONFIG_SYS_MONITOR_LEN=524288
 +CONFIG_SPL_MMC=y
 +CONFIG_SPL_SERIAL=y
 +CONFIG_SPL_DRIVERS_MISC=y
++CONFIG_SPL_STACK=0x920000
 +CONFIG_SPL=y
 +CONFIG_DEFAULT_DEVICE_TREE="imx8mm-kimchi"
 +CONFIG_CSF_SIZE=0x2000
@@ -3330,16 +3412,28 @@ index 0000000000..7ce03cbe17
 +CONFIG_FIT=y
 +CONFIG_FIT_EXTERNAL_OFFSET=0x3000
 +CONFIG_SPL_LOAD_FIT=y
-+# CONFIG_SPL_FIT_GENERATOR is not set
 +CONFIG_OF_SYSTEM_SETUP=y
++CONFIG_SYS_CBSIZE=2048
++CONFIG_SYS_PBSIZE=2074
 +CONFIG_BOARD_LATE_INIT=y
 +CONFIG_BOARD_EARLY_INIT_F=y
++CONFIG_SPL_HAS_BSS_LINKER_SECTION=y
++CONFIG_SPL_BSS_START_ADDR=0x910000
++CONFIG_SPL_BSS_MAX_SIZE=0x2000
++CONFIG_BOARD_EARLY_INIT_F=y
 +CONFIG_SPL_BOARD_INIT=y
-+CONFIG_SPL_SEPARATE_BSS=y
++# CONFIG_SPL_SHARES_INIT_SP_ADDR is not set
++CONFIG_SPL_SYS_MALLOC=y
++CONFIG_SPL_HAS_CUSTOM_MALLOC_START=y
++CONFIG_SPL_CUSTOM_SYS_MALLOC_ADDR=0x42200000
++CONFIG_SPL_SYS_MALLOC_SIZE=0x80000
 +CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_USE_SECTOR=y
 +CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR=0x300
 +CONFIG_SPL_I2C=y
 +CONFIG_SPL_POWER=y
++CONFIG_SPL_USB_HOST=y
++CONFIG_SPL_USB_GADGET=y
++CONFIG_SPL_USB_SDP_SUPPORT=y
 +CONFIG_SPL_WATCHDOG=y
 +CONFIG_NR_DRAM_BANKS=2
 +CONFIG_SYS_PROMPT="u-boot=> "
@@ -3348,6 +3442,7 @@ index 0000000000..7ce03cbe17
 +CONFIG_CMD_CRC32=y
 +CONFIG_CRC32_VERIFY=y
 +# CONFIG_BOOTM_NETBSD is not set
++CONFIG_CMD_NVEDIT_EFI=y
 +CONFIG_CMD_CLK=y
 +CONFIG_CMD_DFU=y
 +CONFIG_CMD_FUSE=y
@@ -3355,6 +3450,8 @@ index 0000000000..7ce03cbe17
 +CONFIG_CMD_GPT=y
 +CONFIG_CMD_I2C=y
 +CONFIG_CMD_MMC=y
++CONFIG_CMD_USB_SDP=y
++CONFIG_CMD_USB_MASS_STORAGE=y
 +CONFIG_CMD_POWEROFF=y
 +CONFIG_CMD_PART=y
 +CONFIG_CMD_DHCP=y
@@ -3377,7 +3474,6 @@ index 0000000000..7ce03cbe17
 +CONFIG_CMD_SF=y
 +CONFIG_CMD_FS_GENERIC=y
 +CONFIG_CMD_USB=y
-+CONFIG_CMD_USB_MASS_STORAGE=y
 +CONFIG_OF_CONTROL=y
 +CONFIG_ENV_OVERWRITE=y
 +CONFIG_DEFAULT_FDT_FILE="imx8mm-kimchi.dtb"
@@ -3402,6 +3498,7 @@ index 0000000000..7ce03cbe17
 +CONFIG_FASTBOOT_BUF_ADDR=0x42800000
 +CONFIG_FASTBOOT_BUF_SIZE=0x40000000
 +CONFIG_FASTBOOT_FLASH=y
++CONFIG_FASTBOOT_USB_DEV=0
 +
 +CONFIG_DM_I2C=y
 +CONFIG_SPL_SYS_I2C_LEGACY=y
@@ -3422,11 +3519,19 @@ index 0000000000..7ce03cbe17
 +CONFIG_PINCTRL=y
 +CONFIG_SPL_PINCTRL=y
 +CONFIG_PINCTRL_IMX8M=y
++CONFIG_POWER_DOMAIN=y
++CONFIG_IMX8M_POWER_DOMAIN=y
 +CONFIG_SPL_POWER_LEGACY=y
 +CONFIG_DM_REGULATOR=y
 +CONFIG_DM_REGULATOR_FIXED=y
 +CONFIG_DM_REGULATOR_GPIO=y
 +CONFIG_SPL_POWER_I2C=y
++CONFIG_POWER_BD71837=y
++CONFIG_DM_PWM=y
++CONFIG_PWM_IMX=y
++CONFIG_DM_SERIAL=y
++CONFIG_DM_RTC=y
++CONFIG_RTC_EMULATION=y
 +CONFIG_MXC_UART=y
 +CONFIG_SYSRESET=y
 +CONFIG_SYSRESET_PSCI=y
@@ -3434,27 +3539,29 @@ index 0000000000..7ce03cbe17
 +CONFIG_IMX_TMU=y
 +CONFIG_USB_TCPC=y
 +CONFIG_USB=y
-+CONFIG_USB_GADGET=y
-+CONFIG_USB_STORAGE=y
-+CONFIG_DM_USB=y
-+CONFIG_CI_UDC=y
 +CONFIG_USB_EHCI_HCD=y
++CONFIG_MXC_USB_OTG_HACTIVE=y
++CONFIG_USB_STORAGE=y
++CONFIG_USB_GADGET=y
++CONFIG_USB_HOST_ETHER=y
++CONFIG_USB_ETHER_ASIX=y
++CONFIG_USB_ETHER_RTL8152=y
 +
 +CONFIG_USB_GADGET_MANUFACTURER="FSL"
 +CONFIG_USB_GADGET_VENDOR_NUM=0x1fc9
 +CONFIG_USB_GADGET_PRODUCT_NUM=0x0152
-+
-+CONFIG_SPL_USB_HOST=y
-+CONFIG_SPL_USB_GADGET=y
-+CONFIG_SPL_USB_SDP_SUPPORT=y
++CONFIG_CI_UDC=y
 +CONFIG_SDP_LOADADDR=0x40400000
++CONFIG_USB_GADGET_DOWNLOAD=y
++CONFIG_USB_MAX_CONTROLLER_COUNT=2
++CONFIG_IMX_BOOTAUX=y
++CONFIG_USB_TCPC=y
 +
 +CONFIG_OF_LIBFDT_OVERLAY=y
 +
-+CONFIG_REGMAP=y
-+CONFIG_SYSCON=y
-+CONFIG_DM_RESET=y
++CONFIG_IMX8M_BLK_CTRL=y
 +
++CONFIG_LEGACY_IMAGE_FORMAT=y
 +CONFIG_LZO=y
 +CONFIG_BZIP2=y
 +CONFIG_EFI_SET_TIME=y
@@ -3462,12 +3569,27 @@ index 0000000000..7ce03cbe17
 +CONFIG_EFI_CAPSULE_ON_DISK=y
 +CONFIG_EFI_CAPSULE_FIRMWARE_RAW=y
 +CONFIG_EFI_SECURE_BOOT=y
++CONFIG_SPL_RSA=y
++CONFIG_SHA384=y
++CONFIG_EFI_VAR_BUF_SIZE=139264
++CONFIG_EFI_IGNORE_OSINDICATIONS=y
++CONFIG_EFI_CAPSULE_AUTHENTICATE=y
++CONFIG_EFI_CAPSULE_ESL_FILE="CRT.esl"
++CONFIG_OPTEE=y
++CONFIG_CMD_OPTEE_RPMB=y
++CONFIG_EFI_MM_COMM_TEE=y
++CONFIG_TEE=y
++CONFIG_EFI_ESRT=y
++CONFIG_EFI_HAVE_CAPSULE_UPDATE=y
++CONFIG_FIT_SIGNATURE=y
++CONFIG_DM_RNG=y
++CONFIG_KASLR=y
 diff --git a/include/configs/kimchi.h b/include/configs/kimchi.h
 new file mode 100644
-index 0000000000..a0b2943a9e
+index 00000000000..f31238a19af
 --- /dev/null
 +++ b/include/configs/kimchi.h
-@@ -0,0 +1,212 @@
+@@ -0,0 +1,160 @@
 +/*
 + * Copyright 2020 GroupGets
 + * Copyright 2018 NXP
@@ -3483,45 +3605,8 @@ index 0000000000..a0b2943a9e
 +#include <asm/arch/imx-regs.h>
 +#include "imx_env.h"
 +
-+/* Permit larger compressed fitimage kernel than 8 MB */
-+#define CONFIG_SYS_BOOTM_LEN		(64 * SZ_1M)
-+#define CONFIG_SPL_MAX_SIZE		(148 * 1024)
-+#define CONFIG_SYS_MONITOR_LEN		SZ_512K
-+#define CONFIG_SYS_UBOOT_BASE	\
++#define CFG_SYS_UBOOT_BASE	\
 +	(QSPI0_AMBA_BASE + CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR * 512)
-+
-+#ifdef CONFIG_SPL_BUILD
-+#define CONFIG_SPL_STACK		0x920000
-+#define CONFIG_SPL_BSS_START_ADDR	0x910000
-+#define CONFIG_SPL_BSS_MAX_SIZE		SZ_8K	/* 8 KB */
-+#define CONFIG_SYS_SPL_MALLOC_START	0x42200000
-+#define CONFIG_SYS_SPL_MALLOC_SIZE	SZ_512K	/* 512 KB */
-+
-+/* malloc f used before GD_FLG_FULL_MALLOC_INIT set */
-+#define CONFIG_MALLOC_F_ADDR		0x930000
-+/* For RAW image gives a error info not panic */
-+#define CONFIG_SPL_ABORT_ON_RAW_IMAGE
-+
-+#define CONFIG_POWER_BD71837
-+#endif
-+
-+#define CONFIG_CMD_READ
-+#define CONFIG_SERIAL_TAG
-+#define CONFIG_FASTBOOT_USB_DEV 0
-+
-+#define CONFIG_REMAKE_ELF
-+/* ENET Config */
-+/* ENET1 */
-+#if defined(CONFIG_FEC_MXC)
-+#define CONFIG_ETHPRIME                 "FEC"
-+#define PHY_ANEG_TIMEOUT 20000
-+
-+#define CONFIG_FEC_XCV_TYPE             RGMII
-+#define CONFIG_FEC_MXC_PHYADDR          0
-+#define FEC_QUIRK_ENET_MAC
-+
-+#define IMX_FEC_BASE			0x30BE0000
-+#endif
 +
 +#ifdef CONFIG_DISTRO_DEFAULTS
 +#define BOOT_TARGET_DEVICES(func) \
@@ -3550,8 +3635,14 @@ index 0000000000..a0b2943a9e
 +			   "else run jh_netboot; fi; \0" \
 +	"jh_netboot=mw 0x303d0518 0xff; setenv fdtfile ${jh_root_dtb}; setenv jh_clk clk_ignore_unused mem=1340MB; run netboot; \0 "
 +
-+#define CONFIG_MFG_ENV_SETTINGS \
-+	CONFIG_MFG_ENV_SETTINGS_DEFAULT \
++#define SR_IR_V2_COMMAND \
++	"nodes=/usbg1 /usbg2 /wdt-reboot /soc@0/caam-sm@100000 /soc@0/bus@30000000/caam_secvio /soc@0/bus@30000000/caam-snvs@30370000 /soc@0/bus@32c00000/lcdif@32e00000 /soc@0/bus@32c00000/csi1_bridge@32e20000 /soc@0/bus@32c00000/mipi_dsi@32e10000 /soc@0/bus@32c00000/mipi_csi@32e30000 /soc@0/bus@32c00000/display-subsystem /audio-codec-bt-sco /sound-bt-sco /audio-codec /sound-wm8524 /dsi-host /rm67199_panel /soc@0/bus@30800000/i2c@30a20000/pca9450@25 /soc@0/bus@30800000/i2c@30a30000/adv7535@3d /soc@0/bus@30800000/i2c@30a30000/tcpc@50 /soc@0/memory-controller@3d400000 /soc@0/bus@30800000/spi@30830000/spi@0 /binman /vpu_h1@38320000 /vpu_g1@38300000 /vpu_g2@38310000 /vpu_v4l2 /gpu@38000000 \0" \
++	"sr_ir_v2_cmd=cp.b ${fdtcontroladdr} ${fdt_addr_r} 0x10000;"\
++	"fdt addr ${fdt_addr_r};"\
++	"for i in ${nodes}; do fdt rm ${i}; done \0"
++
++#define CFG_MFG_ENV_SETTINGS \
++	CFG_MFG_ENV_SETTINGS_DEFAULT \
 +	"initrd_addr=0x43800000\0" \
 +	"initrd_high=0xffffffffffffffff\0" \
 +	"emmc_dev=0\0"\
@@ -3560,10 +3651,11 @@ index 0000000000..a0b2943a9e
 +	// "emmc_ack=1\0"
 +
 +/* Initial environment variables */
-+#define CONFIG_EXTRA_ENV_SETTINGS		\
-+	CONFIG_MFG_ENV_SETTINGS \
++#define CFG_EXTRA_ENV_SETTINGS		\
++	CFG_MFG_ENV_SETTINGS \
 +	BOOTENV \
 +	JAILHOUSE_ENV \
++	SR_IR_V2_COMMAND \
 +	"prepare_mcore=setenv mcore_clk clk-imx8mm.mcore_booted;\0" \
 +	"scriptaddr=0x43500000\0" \
 +	"kernel_addr_r=" __stringify(CONFIG_SYS_LOAD_ADDR) "\0" \
@@ -3580,7 +3672,7 @@ index 0000000000..a0b2943a9e
 +	"initrd_high=0xffffffffffffffff\0" \
 +	"mmcdev="__stringify(CONFIG_SYS_MMC_ENV_DEV)"\0" \
 +	"mmcpart=" __stringify(CONFIG_SYS_MMC_ENV_PART) "\0" \
-+	"mmcroot=" CONFIG_MMCROOT " rootwait rw\0" \
++	"mmcroot=/dev/mmcblk0p2 rootwait rw\0" \
 +	"mmcautodetect=yes\0" \
 +	"mmcargs=setenv bootargs ${jh_clk} console=${console} root=${mmcroot}\0 " \
 +	"loadbootscript=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bsp_script};\0" \
@@ -3633,47 +3725,25 @@ index 0000000000..a0b2943a9e
 +
 +/* Link Definitions */
 +
-+#define CONFIG_SYS_INIT_RAM_ADDR        0x40000000
-+#define CONFIG_SYS_INIT_RAM_SIZE        0x200000
-+#define CONFIG_SYS_INIT_SP_OFFSET \
-+        (CONFIG_SYS_INIT_RAM_SIZE - GENERATED_GBL_DATA_SIZE)
-+#define CONFIG_SYS_INIT_SP_ADDR \
-+        (CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_SP_OFFSET)
++#define CFG_SYS_INIT_RAM_ADDR        0x40000000
++#define CFG_SYS_INIT_RAM_SIZE        0x200000
 +
-+#define CONFIG_MMCROOT			"/dev/mmcblk0p2"  /* USDHC1 */
-+
-+#define CONFIG_SYS_SDRAM_BASE           0x40000000
++#define CFG_SYS_SDRAM_BASE           0x40000000
 +#define PHYS_SDRAM                      0x40000000
 +#define PHYS_SDRAM_SIZE			0x80000000 /* 2GB DDR */
 +
-+#define CONFIG_MXC_UART_BASE		UART2_BASE_ADDR
-+
-+/* Monitor Command Prompt */
-+#define CONFIG_SYS_CBSIZE		2048
-+#define CONFIG_SYS_MAXARGS		64
-+#define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
-+#define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE + \
-+					sizeof(CONFIG_SYS_PROMPT) + 16)
-+
-+#define CONFIG_IMX_BOOTAUX
++#define CFG_MXC_UART_BASE		UART_BASE_ADDR(2)
 +
 +/* USDHC */
 +
-+#define CONFIG_SYS_FSL_USDHC_NUM	2
-+#define CONFIG_SYS_FSL_ESDHC_ADDR       0
++#define CFG_SYS_FSL_USDHC_NUM	2
++#define CFG_SYS_FSL_ESDHC_ADDR       0
 +
-+#define CONFIG_SYS_I2C_SPEED		100000
++#define CFG_SYS_I2C_SPEED		100000
 +
-+/* USB configs */
-+#ifndef CONFIG_SPL_BUILD
-+#define CONFIG_USBD_HS
-+
++#ifdef CONFIG_IMX_MATTER_TRUSTY
++#define NS_ARCH_ARM64 1
 +#endif
-+
-+#define CONFIG_USB_GADGET_VBUS_DRAW 2
-+
-+#define CONFIG_MXC_USB_PORTSC  (PORT_PTS_UTMI | PORT_PTS_PTW)
-+#define CONFIG_USB_MAX_CONTROLLER_COUNT         2
 +
 +#if defined(CONFIG_ANDROID_SUPPORT)
 +#include "imx8mm_evk_android.h"
