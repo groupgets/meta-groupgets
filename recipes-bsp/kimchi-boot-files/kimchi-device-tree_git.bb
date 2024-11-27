@@ -1,7 +1,7 @@
 SRC_URI = "git://github.com/groupgets/kimchi-boot-files.git;protocol=https;branch=master"
 
 PV = "1.0+git${SRCPV}"
-SRCREV = "2b2ac730a5c8c19f3e8ba1f8234aea8385fe2376"
+SRCREV = "df8e71c94923f0f453660a446ca6fb8b776f2f59"
 
 inherit devicetree
 
